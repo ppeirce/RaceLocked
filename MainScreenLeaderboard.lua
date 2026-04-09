@@ -6,11 +6,11 @@ local ROW_GAP = 2
 local VISIBLE_ROWS = 7
 -- Asymmetric: 1px tighter on the left so the table sits slightly left (inner width unchanged).
 local FRAME_PAD_LEFT = 5
-local FRAME_PAD_RIGHT = 7
+local FRAME_PAD_RIGHT = 5
 -- Top 1px tighter than bottom so content sits higher inside the dialog art.
 local FRAME_PAD_TOP = 5
-local FRAME_PAD_BOTTOM = 6
-local BOTTOM_PAD = 6
+local FRAME_PAD_BOTTOM = 5
+local BOTTOM_PAD = 5
 
 local FALLBACK_ROW_BG = { r = 0.38, g = 0.22, b = 0.52, a = 0.92 }
 local RACE_PRIMARY_ROW_BG = {
