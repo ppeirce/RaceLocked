@@ -9,6 +9,12 @@ local fallbackElapsed = 0
 -- Classic Era has no PLAYER_GUILD_JOINED / PLAYER_GUILD_LEFT; derive transitions from roster + IsInGuild().
 local wasInGuild = false
 
+-- Coalesce CHAT_MSG_ADDON-driven UI refreshes (many guild peers × frequent pings).
+local GUILD_NOTIFY_DEBOUNCE_SEC = 0.25
+local GUILD_NOTIFY_MAX_WAIT_SEC = 1.0
+local guildNotifySeq = 0
+local guildNotifyFirstQueued
+
 local function inGuildNow()
   return IsInGuild() and true or false
 end
@@ -112,17 +118,37 @@ local function mergeGuildPeer(entry)
   }
 end
 
+local function fireGuildLeaderboardNotify()
+  guildNotifyFirstQueued = nil
+  if RaceLocked_NotifyLeaderboardDataChanged then
+    RaceLocked_NotifyLeaderboardDataChanged()
+  end
+end
+
 local function notifyDataChangedDeferred()
-  local function run()
-    if RaceLocked_NotifyLeaderboardDataChanged then
-      RaceLocked_NotifyLeaderboardDataChanged()
+  if not C_Timer or not C_Timer.After or not GetTime then
+    fireGuildLeaderboardNotify()
+    return
+  end
+  local now = GetTime()
+  if not guildNotifyFirstQueued then
+    guildNotifyFirstQueued = now
+  end
+  guildNotifySeq = guildNotifySeq + 1
+  local seq = guildNotifySeq
+  local dueDebounced = now + GUILD_NOTIFY_DEBOUNCE_SEC
+  local dueMaxWait = guildNotifyFirstQueued + GUILD_NOTIFY_MAX_WAIT_SEC
+  local due = math.min(dueDebounced, dueMaxWait)
+  local delay = due - now
+  if delay < 0 then
+    delay = 0
+  end
+  C_Timer.After(delay, function()
+    if seq ~= guildNotifySeq then
+      return
     end
-  end
-  if C_Timer and C_Timer.After then
-    C_Timer.After(0, run)
-  else
-    run()
-  end
+    fireGuildLeaderboardNotify()
+  end)
 end
 
 local function notifyDataChanged()
@@ -188,6 +214,8 @@ syncFrame:SetScript('OnEvent', function(_, event, ...)
         startBroadcastTicker()
       else
         stopBroadcastTicker()
+        guildNotifySeq = guildNotifySeq + 1
+        guildNotifyFirstQueued = nil
         if RaceLockedDB then
           RaceLockedDB.guildPeers = {}
         end
