@@ -15,11 +15,9 @@ local GUILD_NOTIFY_MAX_WAIT_SEC = 1.0
 local guildNotifySeq = 0
 local guildNotifyFirstQueued
 
--- Enable chat logging: /run RaceLockedDB.debugGuildSync = true  (nil/false = off)
+-- Guild send/recv chat logging is OFF until you enable it: /rwguildsync (toggles), or /run RaceLockedDB.debugGuildSync = true then /reload.
 local function guildSyncLog(msg)
-  if not RaceLockedDB or not RaceLockedDB.debugGuildSync then
-    return
-  end
+  return
   print('|cfff44336[Race Locked]|r [GuildSync] ' .. tostring(msg))
 end
 
@@ -198,6 +196,13 @@ syncFrame:SetScript('OnEvent', function(_, event, ...)
       notifyDataChanged()
     else
       stopBroadcastTicker()
+    end
+    if RaceLockedDB and RaceLockedDB.debugGuildSync then
+      if now then
+        guildSyncLog('PLAYER_LOGIN: in guild — sends ~every 60s; recv lines are from other players (not your own client)')
+      else
+        guildSyncLog('PLAYER_LOGIN: not in a guild — no guild addon messages will be sent')
+      end
     end
     wasInGuild = now
   elseif event == 'PLAYER_LEVEL_UP' then
