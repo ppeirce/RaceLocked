@@ -1,15 +1,15 @@
--- Use RaceLocked_* globals only so we never collide with other addons' tab managers
+
 local TAB_HEIGHT = 32
 local TAB_SPACING = 3
 local TAB_COUNT = 3
 local TEXTURE_PATH = 'Interface\\AddOns\\RaceLocked\\Textures'
 
--- Uneven widths so three tabs fit a 418px frame; "Leaderboard" / "Points Explained" need more room than "Settings".
-local TAB_WIDTH = 132
+
+local TAB_WIDTH = 125
 local TAB_WIDTHS = {
-  [1] = 132,
-  [2] = 111,
-  [3] = 161,
+  [1] = TAB_WIDTH,
+  [2] = TAB_WIDTH,
+  [3] = TAB_WIDTH,
 }
 
 local BASE_TEXT_COLOR = {
@@ -89,7 +89,7 @@ end
 local TAB_CONTENT_TOP_OFFSET = -102
 -- Match Settings.lua frame size; keep tab content inside with ~10px bottom margin
 -- Must match Settings.lua SETTINGS_FRAME_WIDTH (frame outer width)
-local SETTINGS_FRAME_WIDTH = 418
+local SETTINGS_FRAME_WIDTH = 388
 local SETTINGS_FRAME_HEIGHT = 580
 local TAB_CONTENT_WIDTH = SETTINGS_FRAME_WIDTH - 40
 local TAB_CONTENT_HEIGHT = SETTINGS_FRAME_HEIGHT + TAB_CONTENT_TOP_OFFSET - 10

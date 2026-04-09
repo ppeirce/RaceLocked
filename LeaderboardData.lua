@@ -53,6 +53,29 @@ function RaceLocked_SortLeaderboardInPlace(rows)
   table.sort(rows, leaderboardCompare)
 end
 
+local function achievementPointsLeaderboardCompare(a, b)
+  local apA = a.achievementPoints or 0
+  local apB = b.achievementPoints or 0
+  if apA ~= apB then
+    return apA > apB
+  end
+  local la, lb = a.level or 0, b.level or 0
+  if la ~= lb then
+    return la > lb
+  end
+  return tostring(a.name or '') < tostring(b.name or '')
+end
+
+--- Highest `achievementPoints` in `rows` (tie: level, then name). Does not mutate `rows`.
+function RaceLocked_GetTopAchievementPointsLeaderboardRowFromRows(rows)
+  if not rows or #rows == 0 then
+    return nil
+  end
+  local copy = RaceLocked_CopyLeaderboardEntries(rows)
+  table.sort(copy, achievementPointsLeaderboardCompare)
+  return copy[1]
+end
+
 -- Single roster from `RaceLockedDB.guildPeers` plus local player (live HCA), sorted.
 -- One row per `playerId`; newer `lastSeen` wins if saved data ever has duplicate keys/entries.
 function RaceLocked_GetSortedGuildLeaderboardCopy(guildKey)

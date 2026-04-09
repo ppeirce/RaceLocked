@@ -36,7 +36,7 @@ function RaceLocked_InitializePointsExplainedTab(tabContents, index)
   local scrollChild = CreateFrame('Frame', nil, scroll)
   local contentW = content:GetWidth()
   if not contentW or contentW < 100 then
-    contentW = 508
+    contentW = 348
   end
   local padX = 14
   local w = math.max(200, contentW - 28)

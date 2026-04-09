@@ -4,8 +4,14 @@ local ROW_HEIGHT = 18
 local ROW_GAP = 1
 local HEADER_ROW_HEIGHT = 20
 local PANEL_SIDE_MARGIN = 0
-local PANEL_PAD = 8
+local PANEL_PAD = 3
 local SCROLL_BAR_WIDTH = 26
+-- Horizontal extent of scroll frame past tableTop right (scrollbar sits in this strip).
+local SCROLLBAR_NUDGE_LEFT = 26
+local SCROLL_FRAME_RIGHT_OUTSET = SCROLL_BAR_WIDTH - SCROLLBAR_NUDGE_LEFT
+-- Wider table on the right; scrollbar sits outside the bordered panel (sibling to the right).
+local TABLE_RIGHT_EXTRA = 10
+local PANEL_RIGHT_INSET = SCROLL_BAR_WIDTH - TABLE_RIGHT_EXTRA
 local FALLBACK_ROW_BG = { r = 0.38, g = 0.22, b = 0.52, a = 0.92 }
 local RACE_PRIMARY_ROW_BG = {
   ORC = { r = 0.22, g = 0.68, b = 0.28, a = 0.92 },
@@ -38,17 +44,18 @@ local function getPrimaryRowTint()
   return { r = tint.r, g = tint.g, b = tint.b, a = tint.a }
 end
 
-local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorSide)
+local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorSide, panelTopInset)
   local panel = CreateFrame('Frame', nil, parent, 'BackdropTemplate')
   panel:SetBackdrop(PANEL_BACKDROP)
   panel:SetBackdropColor(0.06, 0.05, 0.05, 0.92)
   panel:SetBackdropBorderColor(0.45, 0.4, 0.3, 0.9)
   if anchorSide ~= 'FULL' then
-    panel:SetWidth(panelWidth)
+    panel:SetWidth(math.max(80, panelWidth - PANEL_RIGHT_INSET))
   end
   if anchorSide == 'FULL' then
-    panel:SetPoint('TOPLEFT', parent, 'TOPLEFT', 0, 0)
-    panel:SetPoint('BOTTOMRIGHT', parent, 'BOTTOMRIGHT', 0, 0)
+    local topY = panelTopInset or 0
+    panel:SetPoint('TOPLEFT', parent, 'TOPLEFT', 0, topY)
+    panel:SetPoint('BOTTOMRIGHT', parent, 'BOTTOMRIGHT', -PANEL_RIGHT_INSET, 0)
   elseif anchorSide == 'LEFT' then
     panel:SetPoint('TOPLEFT', parent, 'TOPLEFT', 0, 0)
     panel:SetPoint('BOTTOMLEFT', parent, 'BOTTOMLEFT', 0, 0)
@@ -57,19 +64,18 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
     panel:SetPoint('BOTTOMRIGHT', parent, 'BOTTOMRIGHT', 0, 0)
   end
 
-  local tableTopY = -10
+  local tableTopY = -3
   local tableTop = CreateFrame('Frame', nil, panel)
   tableTop:SetPoint('TOPLEFT', panel, 'TOPLEFT', PANEL_PAD, tableTopY)
   tableTop:SetPoint('TOPRIGHT', panel, 'TOPRIGHT', -PANEL_PAD, tableTopY)
   tableTop:SetPoint('BOTTOMLEFT', panel, 'BOTTOMLEFT', PANEL_PAD, PANEL_PAD)
   tableTop:SetPoint('BOTTOMRIGHT', panel, 'BOTTOMRIGHT', -PANEL_PAD, PANEL_PAD)
 
-  local tableInnerWidth = panelWidth - (PANEL_PAD * 2)
+  local tableInnerWidth = panelWidth - PANEL_RIGHT_INSET - (PANEL_PAD * 2)
   if tableInnerWidth < 80 then
     tableInnerWidth = 200
   end
-  -- Match list viewport width (scrollbar sits to the right of header + rows)
-  local listInnerW = tableInnerWidth - SCROLL_BAR_WIDTH
+  local listInnerW = tableInnerWidth
   if listInnerW < 60 then
     listInnerW = tableInnerWidth * 0.88
   end
@@ -97,7 +103,7 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
   local headerBg = CreateFrame('Frame', nil, tableTop, 'BackdropTemplate')
   headerBg:SetHeight(HEADER_ROW_HEIGHT)
   headerBg:SetPoint('TOPLEFT', tableTop, 'TOPLEFT', 0, 0)
-  headerBg:SetPoint('TOPRIGHT', tableTop, 'TOPRIGHT', -SCROLL_BAR_WIDTH, 0)
+  headerBg:SetPoint('TOPRIGHT', tableTop, 'TOPRIGHT', 0, 0)
   headerBg:SetBackdrop({ bgFile = 'Interface\\Buttons\\WHITE8x8', edgeFile = nil, tile = false, edgeSize = 0 })
   headerBg:SetBackdropColor(HEADER_STRIP.r, HEADER_STRIP.g, HEADER_STRIP.b, HEADER_STRIP.a)
 
@@ -132,9 +138,11 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
   local rowStep = ROW_HEIGHT + ROW_GAP
   local scrollChildHeight = #rows * ROW_HEIGHT + math.max(0, #rows - 1) * ROW_GAP
 
-  local scroll = CreateFrame('ScrollFrame', nil, tableTop, 'UIPanelScrollFrameTemplate')
+  local scroll = CreateFrame('ScrollFrame', nil, parent, 'UIPanelScrollFrameTemplate')
+  scroll:SetFrameStrata(panel:GetFrameStrata())
+  scroll:SetFrameLevel(panel:GetFrameLevel() + 5)
   scroll:SetPoint('TOPLEFT', headerBg, 'BOTTOMLEFT', 0, -ROW_GAP)
-  scroll:SetPoint('BOTTOMRIGHT', tableTop, 'BOTTOMRIGHT', -SCROLL_BAR_WIDTH, 0)
+  scroll:SetPoint('BOTTOMRIGHT', tableTop, 'BOTTOMRIGHT', SCROLL_FRAME_RIGHT_OUTSET, 0)
   scroll:EnableMouseWheel(true)
 
   local scrollChild = CreateFrame('Frame', nil, scroll)
@@ -142,12 +150,22 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
   scrollChild:SetHeight(math.max(scrollChildHeight, 1))
   scroll:SetScrollChild(scrollChild)
 
-  scroll:SetScript('OnSizeChanged', function(self)
-    local w = self:GetWidth()
+  -- ScrollFrame:GetWidth() includes the scrollbar strip; child width must match the
+  -- viewport (same as tableTop / header) or rows render wider than the header.
+  local function syncScrollChildWidth()
+    local w = tableTop:GetWidth()
+    if not w or w <= 4 then
+      local sw = scroll:GetWidth()
+      if sw and sw > SCROLL_FRAME_RIGHT_OUTSET + 4 then
+        w = sw - SCROLL_FRAME_RIGHT_OUTSET
+      end
+    end
     if w and w > 4 then
       scrollChild:SetWidth(w)
     end
-  end)
+  end
+  scroll:SetScript('OnSizeChanged', syncScrollChildWidth)
+  syncScrollChildWidth()
 
   for i = 1, #rows do
     local y = -((i - 1) * rowStep)
@@ -240,12 +258,18 @@ function RaceLocked_InitializeGuildLeaderboardTab(tabContents, tabIndex)
 
   local contentW = content:GetWidth()
   if not contentW or contentW < 100 then
-    contentW = 508
+    contentW = 348
   end
 
-  local innerW = contentW - (PANEL_SIDE_MARGIN * 2)
+  local innerW = contentW
   local rows = (RaceLocked_GetSortedGuildLeaderboardCopy and RaceLocked_GetSortedGuildLeaderboardCopy()) or {}
-  createLeaderboardPanel(container, rows, getPrimaryRowTint(), innerW, 'FULL')
+  local sectionGap = 8
+  local championH = 0
+  if RaceLocked_CreateGuildChampionSection then
+    championH = RaceLocked_CreateGuildChampionSection(container, rows, PANEL_RIGHT_INSET) or 0
+  end
+  local panelTop = championH > 0 and -(championH + sectionGap) or 0
+  createLeaderboardPanel(container, rows, getPrimaryRowTint(), innerW, 'FULL', panelTop)
 end
 
 function RaceLocked_RefreshGuildLeaderboardTabUI()

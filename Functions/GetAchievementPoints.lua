@@ -1,5 +1,4 @@
 function RaceLocked_GetHCATotalPoints()
-    -- Ensure HardcoreAchievements is loaded before reading its SV
     if not IsAddOnLoaded("HardcoreAchievements") then
         return 0
     end

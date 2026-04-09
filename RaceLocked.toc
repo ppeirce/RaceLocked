@@ -20,6 +20,7 @@ LeaderboardData.lua
 MainScreenLeaderboard.lua
 
 Settings/Settings.lua
+Settings/GuildChampionSection.lua
 Settings/RaceLockedLeaderboardTab.lua
 Settings/RaceLockedSettingsTab.lua
 Settings/PointsExplainedTab.lua
