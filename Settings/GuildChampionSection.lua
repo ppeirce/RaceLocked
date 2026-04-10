@@ -1,40 +1,52 @@
--- Guild Champion summary above the settings leaderboard table.
--- Two bordered sub-panels (~60% / ~40%) with separate background tints.
+-- Faction race grid: four playable races for your faction in a 2×2 layout (no champion / average panel).
 
 local MID_GAP = 6
-local CHAMPION_WIDTH_FRAC = 0.60
 local OUTER_PAD_Y = 4
-
-local SECTION_H = 58
+local TITLE_TOP_PAD = 8
+local TITLE_ROW_H = 18
+local GAP_AFTER_TITLE = 6
 local STATS_ROW_H = 46
-local STATS_ROW_GAP = 6
+local ROW_GAP = 6
+local GAP_AFTER_GRID = 6
+local REFRESH_ROW_H = 26
+local EXPLAIN_TOP_GAP = 8
+local FOOTER_TOP_GAP = 8
 local INNER_PAD = 8
-local ICON_CHAMPION = 34
-local ICON_PAD = 2
+
+local EXPLAIN_TEXT =
+  'Race Locked will automatically remove you from groups that contain players from other races to your own.\n\nThe race averages compute the average level of each race in your faction.'
+
+local ACCENT_W = 3
+local ACCENT_INSET_X = 3
+local ACCENT_INSET_Y = 1
+local FACTION_ICON_SIZE = 28
+local GAP_AFTER_ACCENT = 7
+local GAP_AFTER_ICON = 6
 
 local LABEL_GOLD = { 1, 0.92, 0.62 }
-local NAME_COLOR = { 0.95, 0.93, 0.88 }
 local MUTED = { 0.62, 0.6, 0.55 }
 
--- Champion panel: warm brown-gold tint
-local CHAMPION_BG = { r = 0.16, g = 0.12, b = 0.08, a = 0.94 }
-local CHAMPION_BORDER = { r = 0.58, g = 0.5, b = 0.32, a = 0.92 }
-
--- AP panel: cooler slate tint
 local AP_BG = { r = 0.08, g = 0.1, b = 0.14, a = 0.94 }
 local AP_BORDER = { r = 0.38, g = 0.45, b = 0.52, a = 0.88 }
 
-local CHAMPION_ICON_TEX = 'Interface\\Icons\\spell_holy_surgeoflight'
-
-local PANEL_BACKDROP = {
-  bgFile = 'Interface\\Buttons\\WHITE8x8',
-  edgeFile = 'Interface\\Tooltips\\UI-Tooltip-Border',
-  tile = false,
-  edgeSize = 10,
-  insets = { left = 3, right = 3, top = 3, bottom = 3 },
+-- Per-race crests under Interface\Icons (load reliably in-game; glue CharacterCreate files are not usable from addons).
+--- @type table<string, string>
+local RACE_ICON_TEXTURE = {
+  Human = 'Interface\\Icons\\INV_Misc_Tournaments_Symbol_Human',
+  Dwarf = 'Interface\\Icons\\INV_Misc_Tournaments_Symbol_Dwarf',
+  NightElf = 'Interface\\Icons\\INV_Misc_Tournaments_Symbol_Nightelf',
+  Gnome = 'Interface\\Icons\\INV_Misc_Tournaments_Symbol_Gnome',
+  Orc = 'Interface\\Icons\\INV_Misc_Tournaments_Symbol_Orc',
+  Troll = 'Interface\\Icons\\INV_Misc_Tournaments_Symbol_Troll',
+  Tauren = 'Interface\\Icons\\INV_Misc_Tournaments_Symbol_Tauren',
+  Scourge = 'Interface\\Icons\\INV_Misc_Tournaments_Symbol_Scourge',
 }
 
-local AP_PANEL_BACKDROP = {
+local function raceIconTexture(token)
+  return RACE_ICON_TEXTURE[token] or RACE_ICON_TEXTURE.Human
+end
+
+local CELL_BACKDROP = {
   bgFile = 'Interface\\Buttons\\WHITE8x8',
   edgeFile = 'Interface\\Tooltips\\UI-Tooltip-Border',
   tile = false,
@@ -42,292 +54,346 @@ local AP_PANEL_BACKDROP = {
   insets = { left = 3, right = 3, top = 3, bottom = 3 },
 }
 
-local function makeIconFrame(parent, size, texturePath, edgeSize)
-  edgeSize = edgeSize or 8
-  local f = CreateFrame('Frame', nil, parent, 'BackdropTemplate')
-  f:SetSize(size + ICON_PAD * 2, size + ICON_PAD * 2)
-  f:SetBackdrop({
-    bgFile = 'Interface\\Buttons\\WHITE8x8',
-    edgeFile = 'Interface\\Tooltips\\UI-Tooltip-Border',
-    tile = false,
-    edgeSize = edgeSize,
-    insets = { left = 2, right = 2, top = 2, bottom = 2 },
-  })
-  f:SetBackdropColor(0.04, 0.04, 0.05, 1)
-  f:SetBackdropBorderColor(0.48, 0.44, 0.36, 0.88)
-  local t = f:CreateTexture(nil, 'ARTWORK')
-  t:SetPoint('TOPLEFT', f, 'TOPLEFT', ICON_PAD, -ICON_PAD)
-  t:SetPoint('BOTTOMRIGHT', f, 'BOTTOMRIGHT', -ICON_PAD, ICON_PAD)
-  t:SetTexture(texturePath)
-  t:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-  return f
+-- Per-race accent (left bar); order matches panes 1–4 for that faction.
+local ALLIANCE_RACE_ACCENT = {
+  { 0.78, 0.52, 0.28 }, -- Dwarf
+  { 0.52, 0.35, 0.82 }, -- Night Elf
+  { 0.72, 0.62, 0.42 }, -- Human
+  { 0.88, 0.45, 0.72 }, -- Gnome
+}
+
+local HORDE_RACE_ACCENT = {
+  { 0.32, 0.72, 0.28 }, -- Orc
+  { 0.18, 0.58, 0.85 }, -- Troll
+  { 0.68, 0.48, 0.32 }, -- Tauren
+  { 0.42, 0.68, 0.52 }, -- Undead
+}
+
+local function textLeftOffset()
+  return ACCENT_INSET_X + ACCENT_W + GAP_AFTER_ACCENT + FACTION_ICON_SIZE + GAP_AFTER_ICON
+end
+
+--- Mean level across current guild roster rows (nil if not in a guild or roster empty).
+local function getGuildAverageLevel()
+  if not IsInGuild or not IsInGuild() then
+    return nil
+  end
+  local total = select(1, GetNumGuildMembers(true))
+  if not total or total < 1 then
+    total = select(1, GetNumGuildMembers())
+  end
+  total = tonumber(total) or 0
+  if total < 1 then
+    return nil
+  end
+  local sum = 0
+  local n = 0
+  for i = 1, total do
+    local _, _, _, level = GetGuildRosterInfo(i)
+    local lv = tonumber(level)
+    if lv and lv >= 1 then
+      sum = sum + lv
+      n = n + 1
+    end
+  end
+  if n < 1 then
+    return nil
+  end
+  return sum / n
+end
+
+local function printGuildAverageAfterRefresh()
+  local avg = getGuildAverageLevel()
+  if avg then
+    local n = math.floor(avg + 0.5)
+    print(
+      string.format('|cfffcdd76[Race Locked]|r New race average: |cffffffff%d|r', n)
+    )
+  else
+    print(
+      '|cfff44336[Race Locked]|r No average yet (not in a guild or empty roster).'
+    )
+  end
 end
 
 --- @param parent Frame
---- @param sortedRows table[]|nil same sort as leaderboard (#1 = top rank)
---- @param rightInset number align with leaderboard panel (e.g. PANEL_RIGHT_INSET)
---- @return Frame root container
---- @return number total height including internal padding
-function RaceLocked_CreateGuildChampionSection(parent, sortedRows, rightInset)
+--- @param rightInset number optional right inset (legacy; kept for call compatibility)
+--- @return Frame root
+--- @return number total height
+function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
   rightInset = rightInset or 0
 
-  local function topByStat(fieldName)
-    if type(sortedRows) ~= 'table' then
-      return nil
-    end
-    local top
-    for i = 1, #sortedRows do
-      local row = sortedRows[i]
-      if type(row) == 'table' then
-        local val = tonumber(row[fieldName]) or 0
-        if val >= 0 then
-          if not top then
-            top = row
-          else
-            local topVal = tonumber(top[fieldName]) or 0
-            if val > topVal then
-              top = row
-            elseif val == topVal then
-              local lvl = tonumber(row.level) or 0
-              local topLvl = tonumber(top.level) or 0
-              if lvl > topLvl then
-                top = row
-              elseif lvl == topLvl and tostring(row.name or '') < tostring(top.name or '') then
-                top = row
-              end
-            end
-          end
-        end
-      end
-    end
-    return top
-  end
-
-  local topRank = sortedRows and sortedRows[1] or nil
-  local topAp = nil
-  if RaceLocked_GetTopAchievementPointsLeaderboardRowFromRows then
-    topAp = RaceLocked_GetTopAchievementPointsLeaderboardRowFromRows(sortedRows)
-  end
-  local topEnemies = topByStat('enemiesSlain')
-  local topDungeons = topByStat('dungeonsCompleted')
-  local topJumps = topByStat('playerJumps')
-
-  local innerH = SECTION_H
-  local totalH = OUTER_PAD_Y * 2 + innerH + STATS_ROW_GAP + STATS_ROW_H
+  -- Final height set in layoutGrid (includes explainer wrap height).
+  local totalH = OUTER_PAD_Y
+    + TITLE_TOP_PAD
+    + TITLE_ROW_H
+    + GAP_AFTER_TITLE
+    + STATS_ROW_H * 2
+    + ROW_GAP
+    + GAP_AFTER_GRID
+    + REFRESH_ROW_H
+    + EXPLAIN_TOP_GAP
+    + 72
+    + FOOTER_TOP_GAP
+    + 20
+    + OUTER_PAD_Y
   local root = CreateFrame('Frame', nil, parent)
   root:SetPoint('TOPLEFT', parent, 'TOPLEFT', 0, 0)
   root:SetPoint('TOPRIGHT', parent, 'TOPRIGHT', -rightInset, 0)
   root:SetHeight(totalH)
 
-  local championPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
-  championPane:SetBackdrop(PANEL_BACKDROP)
-  championPane:SetBackdropColor(CHAMPION_BG.r, CHAMPION_BG.g, CHAMPION_BG.b, CHAMPION_BG.a)
-  championPane:SetBackdropBorderColor(CHAMPION_BORDER.r, CHAMPION_BORDER.g, CHAMPION_BORDER.b, CHAMPION_BORDER.a)
-  championPane:SetHeight(innerH)
-  championPane:SetPoint('TOPLEFT', root, 'TOPLEFT', 0, -OUTER_PAD_Y)
+  local titleLabel = root:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
+  titleLabel:SetJustifyH('CENTER')
+  titleLabel:SetText('Average Levels')
+  titleLabel:SetTextColor(LABEL_GOLD[1], LABEL_GOLD[2], LABEL_GOLD[3])
 
-  local apPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
-  apPane:SetBackdrop(AP_PANEL_BACKDROP)
-  apPane:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
-  apPane:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
-  apPane:SetHeight(innerH)
+  local refreshRow = CreateFrame('Frame', nil, root)
+  refreshRow:SetHeight(REFRESH_ROW_H)
+  local refreshBtn = CreateFrame('Button', nil, refreshRow, 'UIPanelButtonTemplate')
+  refreshBtn:SetText('Refresh')
+  refreshBtn:SetSize(120, REFRESH_ROW_H - 2)
+  refreshBtn:SetPoint('CENTER', refreshRow, 'CENTER', 0, 0)
 
-  local killerPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
-  killerPane:SetBackdrop(AP_PANEL_BACKDROP)
-  killerPane:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
-  killerPane:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
-  killerPane:SetHeight(STATS_ROW_H)
-  local delverPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
-  delverPane:SetBackdrop(AP_PANEL_BACKDROP)
-  delverPane:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
-  delverPane:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
-  delverPane:SetHeight(STATS_ROW_H)
-  local hopperPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
-  hopperPane:SetBackdrop(AP_PANEL_BACKDROP)
-  hopperPane:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
-  hopperPane:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
-  hopperPane:SetHeight(STATS_ROW_H)
-
-  local iconChamp = makeIconFrame(championPane, ICON_CHAMPION, CHAMPION_ICON_TEX)
-
-  local championTextHost = CreateFrame('Frame', nil, championPane)
-  championTextHost:SetHeight(40)
-
-  local labelChampion = championTextHost:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
-  labelChampion:SetJustifyH('LEFT')
-  labelChampion:SetText('Guild Champion')
-  labelChampion:SetTextColor(LABEL_GOLD[1], LABEL_GOLD[2], LABEL_GOLD[3])
-
-  local nameChampion = championTextHost:CreateFontString(nil, 'OVERLAY', 'GameFontHighlight')
-  nameChampion:SetJustifyH('LEFT')
-  -- Stack straddles host vertical center so the block reads centered in the panel.
-  labelChampion:SetPoint('LEFT', championTextHost, 'LEFT', 0, 0)
-  labelChampion:SetPoint('RIGHT', championTextHost, 'RIGHT', 0, 0)
-  labelChampion:SetPoint('BOTTOM', championTextHost, 'CENTER', 0, 2)
-  nameChampion:SetPoint('LEFT', championTextHost, 'LEFT', 0, 0)
-  nameChampion:SetPoint('RIGHT', championTextHost, 'RIGHT', 0, 0)
-  nameChampion:SetPoint('TOP', championTextHost, 'CENTER', 0, -5)
-  if topRank and topRank.name and topRank.name ~= '' then
-    local dn = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(topRank.name)
-      or topRank.name
-    nameChampion:SetText(tostring(dn))
-    nameChampion:SetTextColor(NAME_COLOR[1], NAME_COLOR[2], NAME_COLOR[3])
-  else
-    nameChampion:SetText('—')
-    nameChampion:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+  local explainer = root:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  explainer:SetJustifyH('LEFT')
+  explainer:SetJustifyV('TOP')
+  explainer:SetWordWrap(true)
+  explainer:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+  explainer:SetText(EXPLAIN_TEXT)
+  if explainer.SetMaxLines then
+    explainer:SetMaxLines(99)
   end
 
-  local labelAp = apPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  labelAp:SetJustifyH('CENTER')
-  labelAp:SetText('Over Achiever')
-  labelAp:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
+  local footerLabel = root:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
+  footerLabel:SetJustifyH('CENTER')
+  footerLabel:SetJustifyV('TOP')
+  footerLabel:SetText('More to come!')
+  footerLabel:SetTextColor(LABEL_GOLD[1], LABEL_GOLD[2], LABEL_GOLD[3])
 
-  local detailAp = apPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  detailAp:SetJustifyH('CENTER')
-  detailAp:SetWordWrap(true)
-  if topAp and topAp.name and topAp.name ~= '' then
-    local dn = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(topAp.name)
-      or topAp.name
-    detailAp:SetText(string.format('%s  ·  %s', tostring(dn), tostring(topAp.achievementPoints or 0)))
-    detailAp:SetTextColor(0.82, 0.8, 0.74)
-  else
-    detailAp:SetText('—')
-    detailAp:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+  local playerFaction = UnitFactionGroup and UnitFactionGroup('player') or 'Alliance'
+  local isHorde = playerFaction == 'Horde'
+  local raceAccents = isHorde and HORDE_RACE_ACCENT or ALLIANCE_RACE_ACCENT
+  local raceTokens = isHorde and { 'Orc', 'Troll', 'Tauren', 'Scourge' }
+    or { 'Dwarf', 'NightElf', 'Human', 'Gnome' }
+
+  local playerRaceToken = ''
+  if UnitRace then
+    local _, token = UnitRace('player')
+    if token and token ~= '' then
+      playerRaceToken = token
+    end
   end
 
-  local labelKiller = killerPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  labelKiller:SetJustifyH('CENTER')
-  labelKiller:SetText('Bloodthirsty')
-  labelKiller:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
-  local detailKiller = killerPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  detailKiller:SetJustifyH('CENTER')
-  detailKiller:SetWordWrap(true)
-  if topEnemies and topEnemies.name and topEnemies.name ~= '' then
-    local dn = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(topEnemies.name)
-      or topEnemies.name
-    detailKiller:SetText(string.format('%s  ·  %s', tostring(dn), tostring(topEnemies.enemiesSlain or 0)))
-    detailKiller:SetTextColor(0.82, 0.8, 0.74)
-  else
-    detailKiller:SetText('—')
-    detailKiller:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+  local panes = {}
+  local labels = {}
+  local details = {}
+  local accents = {}
+  local icons = {}
+
+  for i = 1, 4 do
+    local f = CreateFrame('Frame', nil, root, 'BackdropTemplate')
+    f:SetBackdrop(CELL_BACKDROP)
+    f:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
+    f:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
+    f:SetHeight(STATS_ROW_H)
+    panes[i] = f
+
+    local ac = raceAccents[i]
+    local accent = f:CreateTexture(nil, 'BORDER')
+    accent:SetColorTexture(ac[1], ac[2], ac[3], 1)
+    accent:SetWidth(ACCENT_W)
+    accent:SetPoint('TOPLEFT', f, 'TOPLEFT', ACCENT_INSET_X, -ACCENT_INSET_Y)
+    accent:SetPoint('BOTTOMLEFT', f, 'BOTTOMLEFT', ACCENT_INSET_X, ACCENT_INSET_Y)
+    accents[i] = accent
+
+    -- OVERLAY draws above the cell backdrop; full-bleed portrait per race (not the shared atlas strip).
+    local icon = f:CreateTexture(nil, 'OVERLAY')
+    local token = raceTokens[i]
+    icon:SetTexture(raceIconTexture(token))
+    icon:SetTexCoord(0, 1, 0, 1)
+    icon:SetSize(FACTION_ICON_SIZE, FACTION_ICON_SIZE)
+    icon:Show()
+    icons[i] = icon
   end
 
-  local labelDelver = delverPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  labelDelver:SetJustifyH('CENTER')
-  labelDelver:SetText('Dungeon Delver')
-  labelDelver:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
-  local detailDelver = delverPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  detailDelver:SetJustifyH('CENTER')
-  detailDelver:SetWordWrap(true)
-  if topDungeons and topDungeons.name and topDungeons.name ~= '' then
-    local dn = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(topDungeons.name)
-      or topDungeons.name
-    detailDelver:SetText(string.format('%s  ·  %s', tostring(dn), tostring(topDungeons.dungeonsCompleted or 0)))
-    detailDelver:SetTextColor(0.82, 0.8, 0.74)
-  else
-    detailDelver:SetText('—')
-    detailDelver:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+  for i = 1, 4 do
+    local lbl = panes[i]:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+    lbl:SetJustifyH('LEFT')
+    lbl:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
+    labels[i] = lbl
+    local det = panes[i]:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+    det:SetJustifyH('LEFT')
+    det:SetWordWrap(true)
+    det:SetText('coming soon')
+    det:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+    details[i] = det
   end
 
-  local labelHopper = hopperPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  labelHopper:SetJustifyH('CENTER')
-  labelHopper:SetText('Hopper')
-  labelHopper:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
-  local detailHopper = hopperPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  detailHopper:SetJustifyH('CENTER')
-  detailHopper:SetWordWrap(true)
-  if topJumps and topJumps.name and topJumps.name ~= '' then
-    local dn = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(topJumps.name)
-      or topJumps.name
-    detailHopper:SetText(string.format('%s  ·  %s', tostring(dn), tostring(topJumps.playerJumps or 0)))
-    detailHopper:SetTextColor(0.82, 0.8, 0.74)
+  if isHorde then
+    labels[1]:SetText('Orc')
+    labels[2]:SetText('Troll')
+    labels[3]:SetText('Tauren')
+    labels[4]:SetText('Undead')
   else
-    detailHopper:SetText('—')
-    detailHopper:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+    labels[1]:SetText('Dwarf')
+    labels[2]:SetText('Night Elf')
+    labels[3]:SetText('Human')
+    labels[4]:SetText('Gnome')
   end
 
-  local function layoutColumns()
+  local tx = textLeftOffset()
+
+  local function refreshRaceDetails()
+    local avg = getGuildAverageLevel()
+    local avgStr
+    if avg then
+      avgStr = tostring(math.floor(avg + 0.5))
+    end
+    for i = 1, 4 do
+      if raceTokens[i] == playerRaceToken then
+        if avgStr then
+          details[i]:SetText(avgStr)
+          details[i]:SetTextColor(0.82, 0.8, 0.74)
+        else
+          details[i]:SetText('—')
+          details[i]:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+        end
+      else
+        details[i]:SetText('coming soon')
+        details[i]:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+      end
+    end
+  end
+
+  local function layoutStatPane(labelFs, detailFs, pane)
+    labelFs:ClearAllPoints()
+    detailFs:ClearAllPoints()
+    labelFs:SetPoint('LEFT', pane, 'LEFT', tx, 0)
+    labelFs:SetPoint('RIGHT', pane, 'RIGHT', -INNER_PAD, 0)
+    labelFs:SetPoint('BOTTOM', pane, 'CENTER', 0, 4)
+    detailFs:SetPoint('LEFT', pane, 'LEFT', tx, 0)
+    detailFs:SetPoint('RIGHT', pane, 'RIGHT', -INNER_PAD, 0)
+    detailFs:SetPoint('TOP', pane, 'CENTER', 0, -4)
+  end
+
+  local function layoutGrid()
     local rw = root:GetWidth()
     if (not rw or rw < 2) and parent and parent.GetWidth then
       rw = math.max(0, parent:GetWidth() - rightInset)
     end
-    local w = rw - MID_GAP
-    if w < 50 then
-      w = 280
-    end
-    local cw = math.floor(w * CHAMPION_WIDTH_FRAC + 0.5)
-    local aw = w - cw
-    championPane:SetWidth(cw)
-    apPane:SetWidth(aw)
-    apPane:ClearAllPoints()
-    apPane:SetPoint('TOPLEFT', championPane, 'TOPRIGHT', MID_GAP, 0)
-    apPane:SetHeight(innerH)
-
-    killerPane:ClearAllPoints()
-    killerPane:SetPoint('TOPLEFT', championPane, 'BOTTOMLEFT', 0, -STATS_ROW_GAP)
-    killerPane:SetHeight(STATS_ROW_H)
-
-    local rowW = rw - (MID_GAP * 2)
-    if rowW < 90 then
-      rowW = 270
-    end
-    local eachW = math.floor(rowW / 3)
-    local rem = rowW - (eachW * 3)
-    local w1 = eachW
-    local w2 = eachW
-    local w3 = eachW + rem
-    killerPane:SetWidth(w1)
-    delverPane:ClearAllPoints()
-    delverPane:SetPoint('TOPLEFT', killerPane, 'TOPRIGHT', MID_GAP, 0)
-    delverPane:SetWidth(w2)
-    delverPane:SetHeight(STATS_ROW_H)
-    hopperPane:ClearAllPoints()
-    hopperPane:SetPoint('TOPLEFT', delverPane, 'TOPRIGHT', MID_GAP, 0)
-    hopperPane:SetWidth(w3)
-    hopperPane:SetHeight(STATS_ROW_H)
-
-    local W = championPane:GetWidth()
-    local iw = iconChamp:GetWidth()
-    if W and W > 20 and iw and iw > 0 then
-      local gapTextIcon = 8
-      local dxIcon = W * 0.5 - INNER_PAD - iw * 0.5
-      iconChamp:ClearAllPoints()
-      iconChamp:SetPoint('CENTER', championPane, 'CENTER', dxIcon, 0)
-
-      local textW = math.max(40, W - INNER_PAD * 2 - gapTextIcon - iw)
-      championTextHost:SetWidth(textW)
-      local offText = INNER_PAD + textW * 0.5 - W * 0.5
-      championTextHost:ClearAllPoints()
-      championTextHost:SetPoint('CENTER', championPane, 'CENTER', offText, 0)
+    if rw < 80 then
+      rw = 400
     end
 
-    labelAp:ClearAllPoints()
-    detailAp:ClearAllPoints()
-    labelAp:SetPoint('LEFT', apPane, 'LEFT', INNER_PAD, 0)
-    labelAp:SetPoint('RIGHT', apPane, 'RIGHT', -INNER_PAD, 0)
-    labelAp:SetPoint('BOTTOM', apPane, 'CENTER', 0, 5)
-    detailAp:SetPoint('LEFT', apPane, 'LEFT', INNER_PAD, 0)
-    detailAp:SetPoint('RIGHT', apPane, 'RIGHT', -INNER_PAD, 0)
-    detailAp:SetPoint('TOP', apPane, 'CENTER', 0, -5)
+    local rowInner = rw - MID_GAP
+    local wLeft = math.floor(rowInner / 2)
+    local wRight = rowInner - wLeft
 
-    local function layoutStatPane(labelFs, detailFs, pane)
-      labelFs:ClearAllPoints()
-      detailFs:ClearAllPoints()
-      labelFs:SetPoint('LEFT', pane, 'LEFT', INNER_PAD, 0)
-      labelFs:SetPoint('RIGHT', pane, 'RIGHT', -INNER_PAD, 0)
-      labelFs:SetPoint('BOTTOM', pane, 'CENTER', 0, 4)
-      detailFs:SetPoint('LEFT', pane, 'LEFT', INNER_PAD, 0)
-      detailFs:SetPoint('RIGHT', pane, 'RIGHT', -INNER_PAD, 0)
-      detailFs:SetPoint('TOP', pane, 'CENTER', 0, -4)
+    local gridTop = OUTER_PAD_Y + TITLE_TOP_PAD + TITLE_ROW_H + GAP_AFTER_TITLE
+    titleLabel:ClearAllPoints()
+    titleLabel:SetPoint('TOPLEFT', root, 'TOPLEFT', 0, -(OUTER_PAD_Y + TITLE_TOP_PAD))
+    titleLabel:SetPoint('TOPRIGHT', root, 'TOPRIGHT', 0, -(OUTER_PAD_Y + TITLE_TOP_PAD))
+
+    panes[1]:ClearAllPoints()
+    panes[1]:SetPoint('TOPLEFT', root, 'TOPLEFT', 0, -gridTop)
+    panes[1]:SetSize(wLeft, STATS_ROW_H)
+
+    panes[2]:ClearAllPoints()
+    panes[2]:SetPoint('TOPLEFT', panes[1], 'TOPRIGHT', MID_GAP, 0)
+    panes[2]:SetSize(wRight, STATS_ROW_H)
+
+    panes[3]:ClearAllPoints()
+    panes[3]:SetPoint('TOPLEFT', panes[1], 'BOTTOMLEFT', 0, -ROW_GAP)
+    panes[3]:SetSize(wLeft, STATS_ROW_H)
+
+    panes[4]:ClearAllPoints()
+    panes[4]:SetPoint('TOPLEFT', panes[3], 'TOPRIGHT', MID_GAP, 0)
+    panes[4]:SetSize(wRight, STATS_ROW_H)
+
+    for j = 1, 4 do
+      local icon = icons[j]
+      icon:ClearAllPoints()
+      icon:SetSize(FACTION_ICON_SIZE, FACTION_ICON_SIZE)
+      icon:SetPoint('LEFT', panes[j], 'LEFT', ACCENT_INSET_X + ACCENT_W + GAP_AFTER_ACCENT, 0)
+      local topInset = math.max(2, (STATS_ROW_H - FACTION_ICON_SIZE) / 2)
+      icon:SetPoint('TOP', panes[j], 'TOP', 0, -topInset)
     end
-    layoutStatPane(labelKiller, detailKiller, killerPane)
-    layoutStatPane(labelDelver, detailDelver, delverPane)
-    layoutStatPane(labelHopper, detailHopper, hopperPane)
+
+    for i = 1, 4 do
+      layoutStatPane(labels[i], details[i], panes[i])
+    end
+
+    refreshRow:ClearAllPoints()
+    refreshRow:SetPoint('TOPLEFT', panes[3], 'BOTTOMLEFT', 0, -GAP_AFTER_GRID)
+    refreshRow:SetPoint('TOPRIGHT', panes[4], 'BOTTOMRIGHT', 0, -GAP_AFTER_GRID)
+
+    explainer:ClearAllPoints()
+    local explainW = math.max(40, rw - INNER_PAD * 2)
+    explainer:SetWidth(explainW)
+    explainer:SetPoint('TOPLEFT', refreshRow, 'BOTTOMLEFT', INNER_PAD, -EXPLAIN_TOP_GAP)
+
+    local explH = explainer:GetStringHeight()
+    local _, fontH = explainer:GetFont()
+    fontH = tonumber(fontH) or 11
+    -- GetStringHeight can under-report one frame; pad by part of a line so root is not too short (avoids “…” truncation).
+    explH = explH + math.ceil(fontH * 0.75)
+
+    footerLabel:ClearAllPoints()
+    footerLabel:SetPoint('TOPLEFT', explainer, 'BOTTOMLEFT', INNER_PAD, -FOOTER_TOP_GAP)
+    footerLabel:SetPoint('TOPRIGHT', explainer, 'BOTTOMRIGHT', -INNER_PAD, -FOOTER_TOP_GAP)
+    local footerH = footerLabel:GetStringHeight()
+
+    local newH = gridTop
+      + STATS_ROW_H * 2
+      + ROW_GAP
+      + GAP_AFTER_GRID
+      + REFRESH_ROW_H
+      + EXPLAIN_TOP_GAP
+      + explH
+      + FOOTER_TOP_GAP
+      + footerH
+      + OUTER_PAD_Y
+    root:SetHeight(newH)
+    totalH = newH
+
+    refreshRaceDetails()
   end
 
-  root:SetScript('OnSizeChanged', layoutColumns)
-  root:SetScript('OnShow', layoutColumns)
-  layoutColumns()
+  refreshBtn:SetScript('OnClick', function()
+    if GuildRoster then
+      GuildRoster()
+    end
+    refreshRaceDetails()
+    if C_Timer and C_Timer.After then
+      C_Timer.After(0, function()
+        refreshRaceDetails()
+        printGuildAverageAfterRefresh()
+      end)
+    else
+      printGuildAverageAfterRefresh()
+    end
+  end)
+
+  if GuildRoster then
+    GuildRoster()
+  end
+
+  root:RegisterEvent('GUILD_ROSTER_UPDATE')
+  root:RegisterEvent('PLAYER_GUILD_UPDATE')
+  root:SetScript('OnEvent', function(_, event)
+    if event == 'PLAYER_GUILD_UPDATE' or event == 'GUILD_ROSTER_UPDATE' then
+      refreshRaceDetails()
+    end
+  end)
+
+  root:SetScript('OnSizeChanged', layoutGrid)
+  root:SetScript('OnShow', function()
+    layoutGrid()
+    if C_Timer and C_Timer.After then
+      C_Timer.After(0, layoutGrid)
+    end
+  end)
+  layoutGrid()
 
   return root, totalH
 end

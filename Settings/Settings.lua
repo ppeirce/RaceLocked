@@ -26,8 +26,9 @@ end
 local settingsFrame =
   CreateFrame('Frame', 'RaceLockedSettingsFrame', UIParent, 'BackdropTemplate')
 tinsert(UISpecialFrames, 'RaceLockedSettingsFrame')
-local SETTINGS_FRAME_WIDTH = 540
-local SETTINGS_FRAME_HEIGHT = 580
+-- Tall enough for wrapped explainer + footer under the grid without clipping (see SetClipsChildren on frame).
+local SETTINGS_FRAME_WIDTH = 340
+local SETTINGS_FRAME_HEIGHT = 330
 settingsFrame:SetSize(SETTINGS_FRAME_WIDTH, SETTINGS_FRAME_HEIGHT)
 settingsFrame:SetMovable(true)
 settingsFrame:EnableMouse(true)
@@ -112,9 +113,6 @@ local closeButton = CreateFrame('Button', nil, titleBar, 'UIPanelCloseButton')
 closeButton:SetPoint('RIGHT', titleBar, 'RIGHT', -15, 4)
 closeButton:SetSize(12, 12)
 closeButton:SetScript('OnClick', function()
-  if RaceLocked_ResetTabState then
-    RaceLocked_ResetTabState()
-  end
   if _G.HideConfirmationDialog then
     _G.HideConfirmationDialog()
   end
@@ -134,62 +132,21 @@ end
 
 function ToggleRaceLockedSettings()
   if settingsFrame:IsShown() then
-    if RaceLocked_ResetTabState then
-      RaceLocked_ResetTabState()
-    end
     if _G.HideConfirmationDialog then
       _G.HideConfirmationDialog()
     end
     settingsFrame:Hide()
   else
     updateSettingsFrameBackdrop()
-    if RaceLocked_InitializeTabs then
-      RaceLocked_InitializeTabs(settingsFrame)
-    end
-    if RaceLocked_HideAllTabs and RaceLocked_SetDefaultTab then
-      RaceLocked_HideAllTabs()
-      RaceLocked_SetDefaultTab()
-    elseif RaceLocked_SwitchToTab then
-      RaceLocked_SwitchToTab(1)
+    if RaceLocked_InitializeMainPanel then
+      RaceLocked_InitializeMainPanel(settingsFrame)
     end
     settingsFrame:Show()
   end
 end
 
-function OpenRaceLockedSettingsToTab(tabIndex)
-  if type(tabIndex) == 'number' then
-    -- Legacy remap from older tab layouts.
-    if tabIndex == 2 then
-      tabIndex = 1
-    end
-    if tabIndex == 4 then
-      tabIndex = 3
-    end
-    if tabIndex == 5 then
-      tabIndex = 2
-    end
-    if tabIndex < 1 or tabIndex > 3 then
-      tabIndex = 1
-    end
-  else
-    tabIndex = 1
-  end
-  updateSettingsFrameBackdrop()
-  if RaceLocked_InitializeTabs then
-    RaceLocked_InitializeTabs(settingsFrame)
-  end
-  if RaceLocked_HideAllTabs and RaceLocked_SwitchToTab then
-    RaceLocked_HideAllTabs()
-    RaceLocked_SwitchToTab(tabIndex)
-  end
-  settingsFrame:Show()
-end
-
 if not RaceLockedDB then RaceLockedDB = {} end
 if not RaceLockedDB.minimapButton then RaceLockedDB.minimapButton = { hide = false } end
-if RaceLockedDB.showOnScreenLeaderboard == nil then
-  RaceLockedDB.showOnScreenLeaderboard = true
-end
 
 local addonLDB = LibStub('LibDataBroker-1.1'):NewDataObject('RaceLocked', {
   type = 'data source',
@@ -202,7 +159,7 @@ local addonLDB = LibStub('LibDataBroker-1.1'):NewDataObject('RaceLocked', {
   end,
   OnTooltipShow = function(tooltip)
     if not tooltip or not tooltip.AddLine then return end
-    tooltip:AddLine('|cffffffffRace Locked|r\n\nLeft-click to open settings', nil, nil, nil, nil)
+    tooltip:AddLine('|cffffffffRace Locked|r\n\nLeft-click to open', nil, nil, nil, nil)
   end,
 })
 

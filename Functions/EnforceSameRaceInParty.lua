@@ -22,13 +22,10 @@ end
 
 EnforceSameRaceInPartyFrame = CreateFrame('Frame')
 
-EnforceSameRaceInPartyFrame:RegisterEvent('DUEL_REQUESTED')
-EnforceSameRaceInPartyFrame:RegisterEvent('DUEL_FINISHED')
-EnforceSameRaceInPartyFrame:RegisterEvent('GROUP_JOINED')
 EnforceSameRaceInPartyFrame:RegisterEvent('GROUP_ROSTER_UPDATE')
 
 EnforceSameRaceInPartyFrame:SetScript('OnEvent', function(self, event, ...)
-    if event == "GROUP_JOINED" or event == "GROUP_ROSTER_UPDATE" then
+    if event == "GROUP_ROSTER_UPDATE" then
         EnforceSameRaceInParty()
     end
 end)
