@@ -6,6 +6,8 @@ local CHAMPION_WIDTH_FRAC = 0.60
 local OUTER_PAD_Y = 4
 
 local SECTION_H = 58
+local STATS_ROW_H = 46
+local STATS_ROW_GAP = 6
 local INNER_PAD = 8
 local ICON_CHAMPION = 34
 local ICON_PAD = 2
@@ -69,17 +71,53 @@ end
 function RaceLocked_CreateGuildChampionSection(parent, sortedRows, rightInset)
   rightInset = rightInset or 0
 
+  local function topByStat(fieldName)
+    if type(sortedRows) ~= 'table' then
+      return nil
+    end
+    local top
+    for i = 1, #sortedRows do
+      local row = sortedRows[i]
+      if type(row) == 'table' then
+        local val = tonumber(row[fieldName]) or 0
+        if val >= 0 then
+          if not top then
+            top = row
+          else
+            local topVal = tonumber(top[fieldName]) or 0
+            if val > topVal then
+              top = row
+            elseif val == topVal then
+              local lvl = tonumber(row.level) or 0
+              local topLvl = tonumber(top.level) or 0
+              if lvl > topLvl then
+                top = row
+              elseif lvl == topLvl and tostring(row.name or '') < tostring(top.name or '') then
+                top = row
+              end
+            end
+          end
+        end
+      end
+    end
+    return top
+  end
+
   local topRank = sortedRows and sortedRows[1] or nil
   local topAp = nil
   if RaceLocked_GetTopAchievementPointsLeaderboardRowFromRows then
     topAp = RaceLocked_GetTopAchievementPointsLeaderboardRowFromRows(sortedRows)
   end
+  local topEnemies = topByStat('enemiesSlain')
+  local topDungeons = topByStat('dungeonsCompleted')
+  local topJumps = topByStat('playerJumps')
 
   local innerH = SECTION_H
+  local totalH = OUTER_PAD_Y * 2 + innerH + STATS_ROW_GAP + STATS_ROW_H
   local root = CreateFrame('Frame', nil, parent)
   root:SetPoint('TOPLEFT', parent, 'TOPLEFT', 0, 0)
   root:SetPoint('TOPRIGHT', parent, 'TOPRIGHT', -rightInset, 0)
-  root:SetHeight(OUTER_PAD_Y * 2 + innerH)
+  root:SetHeight(totalH)
 
   local championPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
   championPane:SetBackdrop(PANEL_BACKDROP)
@@ -93,6 +131,22 @@ function RaceLocked_CreateGuildChampionSection(parent, sortedRows, rightInset)
   apPane:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
   apPane:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
   apPane:SetHeight(innerH)
+
+  local killerPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
+  killerPane:SetBackdrop(AP_PANEL_BACKDROP)
+  killerPane:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
+  killerPane:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
+  killerPane:SetHeight(STATS_ROW_H)
+  local delverPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
+  delverPane:SetBackdrop(AP_PANEL_BACKDROP)
+  delverPane:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
+  delverPane:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
+  delverPane:SetHeight(STATS_ROW_H)
+  local hopperPane = CreateFrame('Frame', nil, root, 'BackdropTemplate')
+  hopperPane:SetBackdrop(AP_PANEL_BACKDROP)
+  hopperPane:SetBackdropColor(AP_BG.r, AP_BG.g, AP_BG.b, AP_BG.a)
+  hopperPane:SetBackdropBorderColor(AP_BORDER.r, AP_BORDER.g, AP_BORDER.b, AP_BORDER.a)
+  hopperPane:SetHeight(STATS_ROW_H)
 
   local iconChamp = makeIconFrame(championPane, ICON_CHAMPION, CHAMPION_ICON_TEX)
 
@@ -125,7 +179,7 @@ function RaceLocked_CreateGuildChampionSection(parent, sortedRows, rightInset)
 
   local labelAp = apPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
   labelAp:SetJustifyH('CENTER')
-  labelAp:SetText('Most Achievements')
+  labelAp:SetText('Over Achiever')
   labelAp:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
 
   local detailAp = apPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
@@ -139,6 +193,57 @@ function RaceLocked_CreateGuildChampionSection(parent, sortedRows, rightInset)
   else
     detailAp:SetText('—')
     detailAp:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+  end
+
+  local labelKiller = killerPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  labelKiller:SetJustifyH('CENTER')
+  labelKiller:SetText('Bloodthirsty')
+  labelKiller:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
+  local detailKiller = killerPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  detailKiller:SetJustifyH('CENTER')
+  detailKiller:SetWordWrap(true)
+  if topEnemies and topEnemies.name and topEnemies.name ~= '' then
+    local dn = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(topEnemies.name)
+      or topEnemies.name
+    detailKiller:SetText(string.format('%s  ·  %s', tostring(dn), tostring(topEnemies.enemiesSlain or 0)))
+    detailKiller:SetTextColor(0.82, 0.8, 0.74)
+  else
+    detailKiller:SetText('—')
+    detailKiller:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+  end
+
+  local labelDelver = delverPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  labelDelver:SetJustifyH('CENTER')
+  labelDelver:SetText('Dungeon Delver')
+  labelDelver:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
+  local detailDelver = delverPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  detailDelver:SetJustifyH('CENTER')
+  detailDelver:SetWordWrap(true)
+  if topDungeons and topDungeons.name and topDungeons.name ~= '' then
+    local dn = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(topDungeons.name)
+      or topDungeons.name
+    detailDelver:SetText(string.format('%s  ·  %s', tostring(dn), tostring(topDungeons.dungeonsCompleted or 0)))
+    detailDelver:SetTextColor(0.82, 0.8, 0.74)
+  else
+    detailDelver:SetText('—')
+    detailDelver:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
+  end
+
+  local labelHopper = hopperPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  labelHopper:SetJustifyH('CENTER')
+  labelHopper:SetText('Hopper')
+  labelHopper:SetTextColor(LABEL_GOLD[1] * 0.9, LABEL_GOLD[2] * 0.9, LABEL_GOLD[3] * 0.9)
+  local detailHopper = hopperPane:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  detailHopper:SetJustifyH('CENTER')
+  detailHopper:SetWordWrap(true)
+  if topJumps and topJumps.name and topJumps.name ~= '' then
+    local dn = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(topJumps.name)
+      or topJumps.name
+    detailHopper:SetText(string.format('%s  ·  %s', tostring(dn), tostring(topJumps.playerJumps or 0)))
+    detailHopper:SetTextColor(0.82, 0.8, 0.74)
+  else
+    detailHopper:SetText('—')
+    detailHopper:SetTextColor(MUTED[1], MUTED[2], MUTED[3])
   end
 
   local function layoutColumns()
@@ -157,6 +262,29 @@ function RaceLocked_CreateGuildChampionSection(parent, sortedRows, rightInset)
     apPane:ClearAllPoints()
     apPane:SetPoint('TOPLEFT', championPane, 'TOPRIGHT', MID_GAP, 0)
     apPane:SetHeight(innerH)
+
+    killerPane:ClearAllPoints()
+    killerPane:SetPoint('TOPLEFT', championPane, 'BOTTOMLEFT', 0, -STATS_ROW_GAP)
+    killerPane:SetHeight(STATS_ROW_H)
+
+    local rowW = rw - (MID_GAP * 2)
+    if rowW < 90 then
+      rowW = 270
+    end
+    local eachW = math.floor(rowW / 3)
+    local rem = rowW - (eachW * 3)
+    local w1 = eachW
+    local w2 = eachW
+    local w3 = eachW + rem
+    killerPane:SetWidth(w1)
+    delverPane:ClearAllPoints()
+    delverPane:SetPoint('TOPLEFT', killerPane, 'TOPRIGHT', MID_GAP, 0)
+    delverPane:SetWidth(w2)
+    delverPane:SetHeight(STATS_ROW_H)
+    hopperPane:ClearAllPoints()
+    hopperPane:SetPoint('TOPLEFT', delverPane, 'TOPRIGHT', MID_GAP, 0)
+    hopperPane:SetWidth(w3)
+    hopperPane:SetHeight(STATS_ROW_H)
 
     local W = championPane:GetWidth()
     local iw = iconChamp:GetWidth()
@@ -181,11 +309,25 @@ function RaceLocked_CreateGuildChampionSection(parent, sortedRows, rightInset)
     detailAp:SetPoint('LEFT', apPane, 'LEFT', INNER_PAD, 0)
     detailAp:SetPoint('RIGHT', apPane, 'RIGHT', -INNER_PAD, 0)
     detailAp:SetPoint('TOP', apPane, 'CENTER', 0, -5)
+
+    local function layoutStatPane(labelFs, detailFs, pane)
+      labelFs:ClearAllPoints()
+      detailFs:ClearAllPoints()
+      labelFs:SetPoint('LEFT', pane, 'LEFT', INNER_PAD, 0)
+      labelFs:SetPoint('RIGHT', pane, 'RIGHT', -INNER_PAD, 0)
+      labelFs:SetPoint('BOTTOM', pane, 'CENTER', 0, 4)
+      detailFs:SetPoint('LEFT', pane, 'LEFT', INNER_PAD, 0)
+      detailFs:SetPoint('RIGHT', pane, 'RIGHT', -INNER_PAD, 0)
+      detailFs:SetPoint('TOP', pane, 'CENTER', 0, -4)
+    end
+    layoutStatPane(labelKiller, detailKiller, killerPane)
+    layoutStatPane(labelDelver, detailDelver, delverPane)
+    layoutStatPane(labelHopper, detailHopper, hopperPane)
   end
 
   root:SetScript('OnSizeChanged', layoutColumns)
   root:SetScript('OnShow', layoutColumns)
   layoutColumns()
 
-  return root, (OUTER_PAD_Y * 2 + innerH)
+  return root, totalH
 end

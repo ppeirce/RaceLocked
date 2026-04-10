@@ -6,8 +6,6 @@ local MSG_SEP = '\031'
 
 local broadcastTicker
 local fallbackElapsed = 0
--- Classic Era has no PLAYER_GUILD_JOINED / PLAYER_GUILD_LEFT; derive transitions from roster + IsInGuild().
-local wasInGuild = false
 
 -- Coalesce CHAT_MSG_ADDON-driven UI refreshes (many guild peers × frequent pings).
 local GUILD_NOTIFY_DEBOUNCE_SEC = 0.25
@@ -37,10 +35,6 @@ local function guildBroadcastDisplayName()
     end
   end
   return u
-end
-
-local function inGuildNow()
-  return IsInGuild() and true or false
 end
 
 local function ensureGuildPeers()
@@ -75,6 +69,9 @@ local function mergeGuildPeer(entry)
     name = entry.name,
     playerId = entry.playerId,
     achievementPoints = entry.achievementPoints,
+    enemiesSlain = entry.enemiesSlain or 0,
+    dungeonsCompleted = entry.dungeonsCompleted or 0,
+    playerJumps = entry.playerJumps or 0,
     level = entry.level,
     lastSeen = now,
   }
@@ -84,38 +81,65 @@ local function parseGuildPayload(message)
   if type(message) ~= 'string' or message == '' then
     return nil
   end
-  -- Avoid strsplit: use exactly five \031-separated non-empty segments (ver + 4 fields).
+  -- Avoid strsplit: use \031-separated non-empty segments.
   local fields = {}
   for seg in string.gmatch(message, '([^\031]+)') do
     fields[#fields + 1] = seg
   end
-  if #fields ~= 5 or fields[1] ~= '1' then
+  if #fields < 5 then
     return nil
   end
-  local fname, playerId, apStr, lvlStr = fields[2], fields[3], fields[4], fields[5]
+  local version = fields[1]
+  local fname, playerId, apStr, lvlStr, enemiesStr, dcStr, jumpsStr
+  if version == '1' and #fields == 5 then
+    fname, playerId, apStr, lvlStr = fields[2], fields[3], fields[4], fields[5]
+    enemiesStr, dcStr, jumpsStr = '0', '0', '0'
+  elseif version == '2' and #fields == 7 then
+    fname, playerId, apStr, lvlStr, dcStr, jumpsStr = fields[2], fields[3], fields[4], fields[5], fields[6], fields[7]
+    enemiesStr = '0'
+  elseif version == '3' and #fields == 8 then
+    fname, playerId, apStr, lvlStr, enemiesStr, dcStr, jumpsStr = fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8]
+  else
+    return nil
+  end
   if not fname or fname == '' or not playerId or playerId == '' or not apStr or lvlStr == nil or lvlStr == '' then
     return nil
   end
   local ap = tonumber(apStr) or 0
   local level = tonumber(lvlStr) or 1
+  local enemiesSlain = tonumber(enemiesStr) or 0
+  local dungeonsCompleted = tonumber(dcStr) or 0
+  local playerJumps = tonumber(jumpsStr) or 0
   if ap < 0 then
     ap = 0
   end
   if level < 1 then
     level = 1
   end
+  if enemiesSlain < 0 then
+    enemiesSlain = 0
+  end
+  if dungeonsCompleted < 0 then
+    dungeonsCompleted = 0
+  end
+  if playerJumps < 0 then
+    playerJumps = 0
+  end
   return {
     name = fname,
     playerId = playerId,
     achievementPoints = ap,
+    enemiesSlain = enemiesSlain,
+    dungeonsCompleted = dungeonsCompleted,
+    playerJumps = playerJumps,
     level = level,
   }
 end
 
 local function fireGuildLeaderboardNotify()
   guildNotifyFirstQueued = nil
-  if RaceLocked_NotifyLeaderboardDataChanged then
-    RaceLocked_NotifyLeaderboardDataChanged()
+  if RaceLocked_NotifyMainScreenLeaderboardDataChanged then
+    RaceLocked_NotifyMainScreenLeaderboardDataChanged()
   end
 end
 
@@ -146,8 +170,8 @@ local function notifyDataChangedDeferred()
 end
 
 local function notifyDataChanged()
-  if RaceLocked_NotifyLeaderboardDataChanged then
-    RaceLocked_NotifyLeaderboardDataChanged()
+  if RaceLocked_NotifyMainScreenLeaderboardDataChanged then
+    RaceLocked_NotifyMainScreenLeaderboardDataChanged()
   end
 end
 
@@ -169,7 +193,31 @@ function RaceLocked_BroadcastGuildPing()
   if RaceLocked_GetPlayerAchievementPoints then
     ap = RaceLocked_GetPlayerAchievementPoints()
   end
-  local payload = table.concat({ '1', name, guid, tostring(ap), tostring(level) }, MSG_SEP)
+  local enemiesSlain = 0
+  if RaceLocked_GetPlayerEnemiesSlain then
+    enemiesSlain = RaceLocked_GetPlayerEnemiesSlain()
+  end
+  local dungeonsCompleted = 0
+  if RaceLocked_GetPlayerDungeonCompletions then
+    dungeonsCompleted = RaceLocked_GetPlayerDungeonCompletions()
+  end
+  local playerJumps = 0
+  if RaceLocked_GetPlayerJumpCount then
+    playerJumps = RaceLocked_GetPlayerJumpCount()
+  end
+  local payload = table.concat(
+    {
+      '3',
+      name,
+      guid,
+      tostring(ap),
+      tostring(level),
+      tostring(enemiesSlain),
+      tostring(dungeonsCompleted),
+      tostring(playerJumps),
+    },
+    MSG_SEP
+  )
   if #payload > 255 then
     guildSyncLog(string.format('send skipped: payload too long (%d bytes)', #payload))
     return
@@ -189,10 +237,21 @@ function RaceLocked_BroadcastGuildPing()
     name = name,
     playerId = guid,
     achievementPoints = ap,
+    enemiesSlain = enemiesSlain,
+    dungeonsCompleted = dungeonsCompleted,
+    playerJumps = playerJumps,
     level = level,
   })
   notifyDataChangedDeferred()
-  guildSyncLog(string.format('sent GUILD: name=%s ap=%s level=%s', name, tostring(ap), tostring(level)))
+  guildSyncLog(string.format(
+    'sent GUILD: name=%s ap=%s enemies=%s dungeons=%s jumps=%s level=%s',
+    name,
+    tostring(ap),
+    tostring(enemiesSlain),
+    tostring(dungeonsCompleted),
+    tostring(playerJumps),
+    tostring(level)
+  ))
 end
 
 local function startBroadcastTicker()
@@ -211,7 +270,6 @@ syncFrame:RegisterEvent('ADDON_LOADED')
 syncFrame:RegisterEvent('PLAYER_LOGIN')
 syncFrame:RegisterEvent('PLAYER_LEVEL_UP')
 syncFrame:RegisterEvent('CHAT_MSG_ADDON')
-syncFrame:RegisterEvent('GUILD_ROSTER_UPDATE')
 
 syncFrame:SetScript('OnEvent', function(_, event, ...)
   if event == 'ADDON_LOADED' then
@@ -223,8 +281,7 @@ syncFrame:SetScript('OnEvent', function(_, event, ...)
   elseif event == 'PLAYER_LOGIN' then
     ensureGuildPeers()
     registerMsgPrefix()
-    local now = inGuildNow()
-    if now then
+    if IsInGuild() then
       RaceLocked_BroadcastGuildPing()
       startBroadcastTicker()
       notifyDataChanged()
@@ -235,13 +292,12 @@ syncFrame:SetScript('OnEvent', function(_, event, ...)
       if C_ChatInfo and C_ChatInfo.IsAddonMessagePrefixRegistered then
         guildSyncLog('prefix RaceLocked registered: ' .. tostring(C_ChatInfo.IsAddonMessagePrefixRegistered(MSG_PREFIX)))
       end
-      if now then
+      if IsInGuild() then
         guildSyncLog('PLAYER_LOGIN: in guild — sends ~every 60s; recv only from other clients (+ local merge after own send)')
       else
         guildSyncLog('PLAYER_LOGIN: not in a guild — no guild addon messages will be sent')
       end
     end
-    wasInGuild = now
   elseif event == 'PLAYER_LEVEL_UP' then
     if IsInGuild() then
       RaceLocked_BroadcastGuildPing()
@@ -259,33 +315,18 @@ syncFrame:SetScript('OnEvent', function(_, event, ...)
       mergeGuildPeer(entry)
       notifyDataChangedDeferred()
       guildSyncLog(string.format(
-        'recv merged: name=%s ap=%s level=%s (sender=%s)',
+        'recv merged: name=%s ap=%s enemies=%s dungeons=%s jumps=%s level=%s (sender=%s)',
         tostring(entry.name),
         tostring(entry.achievementPoints),
+        tostring(entry.enemiesSlain),
+        tostring(entry.dungeonsCompleted),
+        tostring(entry.playerJumps),
         tostring(entry.level),
         tostring(sender or '?')
       ))
     else
       guildSyncLog(string.format('recv ignored: invalid payload (len=%d)', type(message) == 'string' and #message or 0))
     end
-  elseif event == 'GUILD_ROSTER_UPDATE' then
-    local now = inGuildNow()
-    if now ~= wasInGuild then
-      if now then
-        ensureGuildPeers()
-        RaceLocked_BroadcastGuildPing()
-        startBroadcastTicker()
-      else
-        stopBroadcastTicker()
-        guildNotifySeq = guildNotifySeq + 1
-        guildNotifyFirstQueued = nil
-        if RaceLockedDB then
-          RaceLockedDB.guildPeers = {}
-        end
-      end
-      notifyDataChanged()
-    end
-    wasInGuild = now
   end
 end)
 

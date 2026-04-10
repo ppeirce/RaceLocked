@@ -4,8 +4,11 @@
 ## Author: BonniesDad
 ## Notes: Race Locked leaderboard and settings
 ## SavedVariablesPerCharacter: RaceLockedDB
+## OptionalDeps: HardcoreAchievements, UltraStatistics
 
 RaceLocked.lua
+LeaderboardData.lua
+MainScreenLeaderboard.lua
 
 ## Libs
 Libs/LibStub/LibStub.lua
@@ -17,10 +20,9 @@ Functions/GetAchievementPoints.lua
 Functions/ApplyGuildRosterRow.lua
 Functions/MergeGuildRosterIntoLeaderboard.lua
 Functions/GuildSync.lua
-
-LeaderboardData.lua
 Functions/LeaderboardRowColor.lua
-MainScreenLeaderboard.lua
+Functions/GetStatisticsPoints.lua
+Functions/EnforceSameRaceInParty.lua
 
 Settings/Settings.lua
 Settings/GuildChampionSection.lua
@@ -28,5 +30,3 @@ Settings/RaceLockedLeaderboardTab.lua
 Settings/RaceLockedSettingsTab.lua
 Settings/PointsExplainedTab.lua
 Settings/TabManager.lua
-
-Functions/EnforceSameRaceInParty.lua
