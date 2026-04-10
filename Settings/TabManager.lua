@@ -89,7 +89,7 @@ end
 local TAB_CONTENT_TOP_OFFSET = -92
 -- Match Settings.lua frame size; keep tab content inside with ~10px bottom margin
 -- Must match Settings.lua SETTINGS_FRAME_WIDTH (frame outer width)
-local SETTINGS_FRAME_WIDTH = 388
+local SETTINGS_FRAME_WIDTH = 540
 local SETTINGS_FRAME_HEIGHT = 580
 local TAB_CONTENT_WIDTH = SETTINGS_FRAME_WIDTH - 40
 local TAB_CONTENT_HEIGHT = SETTINGS_FRAME_HEIGHT + TAB_CONTENT_TOP_OFFSET - 10

@@ -19,6 +19,9 @@ function RaceLocked_GetPlayerLeaderboardRow()
     playerId = guid,
     level = level,
     achievementPoints = RaceLocked_GetPlayerAchievementPoints(),
+    enemiesSlain = (RaceLocked_GetPlayerEnemiesSlain and RaceLocked_GetPlayerEnemiesSlain()) or 0,
+    dungeonsCompleted = (RaceLocked_GetPlayerDungeonCompletions and RaceLocked_GetPlayerDungeonCompletions()) or 0,
+    playerJumps = (RaceLocked_GetPlayerJumpCount and RaceLocked_GetPlayerJumpCount()) or 0,
   }
 end
 
@@ -105,6 +108,9 @@ function RaceLocked_GetSortedGuildLeaderboardCopy(guildKey)
             name = e.name,
             playerId = pid,
             achievementPoints = e.achievementPoints or 0,
+            enemiesSlain = e.enemiesSlain or 0,
+            dungeonsCompleted = e.dungeonsCompleted or 0,
+            playerJumps = e.playerJumps or 0,
             level = e.level or 1,
             _ts = ts,
           }
@@ -127,6 +133,9 @@ function RaceLocked_GetSortedGuildLeaderboardCopy(guildKey)
       if rows[i].playerId == myGuid then
         rows[i].name = player.name
         rows[i].achievementPoints = player.achievementPoints
+        rows[i].enemiesSlain = player.enemiesSlain
+        rows[i].dungeonsCompleted = player.dungeonsCompleted
+        rows[i].playerJumps = player.playerJumps
         rows[i].level = player.level
         found = true
         break
@@ -226,10 +235,14 @@ end
 
 RaceLocked_GetMainScreenLeaderboardWindow = RaceLocked_GetMainScreenCombinedLeaderboardWindow
 
-function RaceLocked_NotifyLeaderboardDataChanged()
+function RaceLocked_NotifyMainScreenLeaderboardDataChanged()
   if RaceLocked_RefreshMainScreenLeaderboard then
     RaceLocked_RefreshMainScreenLeaderboard()
   end
+end
+
+function RaceLocked_NotifyLeaderboardDataChanged()
+  RaceLocked_NotifyMainScreenLeaderboardDataChanged()
   if RaceLocked_RefreshGuildLeaderboardTabUI then
     RaceLocked_RefreshGuildLeaderboardTabUI()
   end

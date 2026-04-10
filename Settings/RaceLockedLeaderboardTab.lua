@@ -11,9 +11,12 @@ local SCROLL_BAR_WIDTH = 26
 local SCROLL_BAR_NUDGE_LEFT = 21
 local HEADER_STRIP = { r = 0.12, g = 0.10, b = 0.08, a = 0.98 }
 
-local AP_COLUMN_PAD = 12
-local NAME_COL_SHRINK = 20
-local NAME_TO_LEVEL_SHIFT = 20
+local AP_COLUMN_PAD = 26
+local ENEMIES_COLUMN_PAD = 24
+local DUNGEONS_COLUMN_PAD = 8
+local JUMPS_COLUMN_PAD = 8
+local NAME_COL_SHRINK = 22
+local NAME_TO_LEVEL_SHIFT = 14
 local PANEL_BACKDROP = {
   bgFile = 'Interface\\DialogFrame\\UI-DialogBox-Background',
   edgeFile = 'Interface\\Tooltips\\UI-Tooltip-Border',
@@ -74,21 +77,39 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
     RaceLocked_SortLeaderboardInPlace(rows)
   end
 
-  local ACHIEVEMENT_POINTS_LABEL = 'Achievement Points'
+  local ACHIEVEMENT_POINTS_LABEL = 'Points'
+  local ENEMIES_LABEL = 'Enemies'
+  local DUNGEONS_LABEL = 'Dungeons'
+  local JUMPS_LABEL = 'Jumps'
 
   local measureFs = panel:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
   measureFs:SetText(ACHIEVEMENT_POINTS_LABEL)
   local colApW = math.ceil(measureFs:GetStringWidth()) + AP_COLUMN_PAD
   measureFs:SetText('12450')
   colApW = math.max(colApW, math.ceil(measureFs:GetStringWidth()) + AP_COLUMN_PAD)
+  measureFs:SetText(ENEMIES_LABEL)
+  local colEnemiesW = math.ceil(measureFs:GetStringWidth()) + ENEMIES_COLUMN_PAD
+  measureFs:SetText('12450')
+  colEnemiesW = math.max(colEnemiesW, math.ceil(measureFs:GetStringWidth()) + ENEMIES_COLUMN_PAD)
+  measureFs:SetText(DUNGEONS_LABEL)
+  local colDungeonsW = math.ceil(measureFs:GetStringWidth()) + DUNGEONS_COLUMN_PAD
+  measureFs:SetText('1245')
+  colDungeonsW = math.max(colDungeonsW, math.ceil(measureFs:GetStringWidth()) + DUNGEONS_COLUMN_PAD)
+  measureFs:SetText(JUMPS_LABEL)
+  local colJumpsW = math.ceil(measureFs:GetStringWidth()) + JUMPS_COLUMN_PAD
+  measureFs:SetText('12450')
+  colJumpsW = math.max(colJumpsW, math.ceil(measureFs:GetStringWidth()) + JUMPS_COLUMN_PAD)
   measureFs:Hide()
 
   local colRankW = math.floor(math.min(32, math.max(22, dataInnerW * 0.065))) + 5
   local colLevelW = math.floor(math.min(32, math.max(24, dataInnerW * 0.078)))
   colLevelW = colLevelW + NAME_TO_LEVEL_SHIFT
-  local restW = math.max(40, dataInnerW - colRankW - colApW - colLevelW)
+  local restW = math.max(40, dataInnerW - colRankW - colApW - colEnemiesW - colDungeonsW - colJumpsW - colLevelW)
   local colNameW = math.max(48, restW - NAME_COL_SHRINK)
   local xAp = colRankW + colNameW
+  local xEnemies = xAp + colApW
+  local xDungeons = xEnemies + colEnemiesW
+  local xJumps = xDungeons + colDungeonsW
 
   local headerBg = CreateFrame('Frame', nil, tableTop, 'BackdropTemplate')
   headerBg:SetHeight(HEADER_ROW_HEIGHT)
@@ -117,6 +138,24 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
   hAp:SetJustifyH('LEFT')
   hAp:SetText(ACHIEVEMENT_POINTS_LABEL)
   hAp:SetTextColor(1, 0.92, 0.62)
+  local hEnemies = headerBg:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  hEnemies:SetPoint('TOPLEFT', headerBg, 'TOPLEFT', xEnemies, -3)
+  hEnemies:SetWidth(colEnemiesW)
+  hEnemies:SetJustifyH('LEFT')
+  hEnemies:SetText(ENEMIES_LABEL)
+  hEnemies:SetTextColor(1, 0.92, 0.62)
+  local hDungeons = headerBg:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  hDungeons:SetPoint('TOPLEFT', headerBg, 'TOPLEFT', xDungeons, -3)
+  hDungeons:SetWidth(colDungeonsW)
+  hDungeons:SetJustifyH('LEFT')
+  hDungeons:SetText(DUNGEONS_LABEL)
+  hDungeons:SetTextColor(1, 0.92, 0.62)
+  local hJumps = headerBg:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+  hJumps:SetPoint('TOPLEFT', headerBg, 'TOPLEFT', xJumps, -3)
+  hJumps:SetWidth(colJumpsW)
+  hJumps:SetJustifyH('LEFT')
+  hJumps:SetText(JUMPS_LABEL)
+  hJumps:SetTextColor(1, 0.92, 0.62)
 
   local hLvl = headerBg:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
   hLvl:SetPoint('TOPRIGHT', headerBg, 'TOPRIGHT', -(SCROLL_BAR_WIDTH + 4), -3)
@@ -255,6 +294,18 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
     row.apFs:SetPoint('LEFT', row, 'LEFT', xAp, 0)
     row.apFs:SetWidth(colApW)
     row.apFs:SetJustifyH('LEFT')
+    row.enemiesFs = row:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+    row.enemiesFs:SetPoint('LEFT', row, 'LEFT', xEnemies, 0)
+    row.enemiesFs:SetWidth(colEnemiesW)
+    row.enemiesFs:SetJustifyH('LEFT')
+    row.dungeonsFs = row:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+    row.dungeonsFs:SetPoint('LEFT', row, 'LEFT', xDungeons, 0)
+    row.dungeonsFs:SetWidth(colDungeonsW)
+    row.dungeonsFs:SetJustifyH('LEFT')
+    row.jumpsFs = row:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
+    row.jumpsFs:SetPoint('LEFT', row, 'LEFT', xJumps, 0)
+    row.jumpsFs:SetWidth(colJumpsW)
+    row.jumpsFs:SetJustifyH('LEFT')
 
     row.lvlFs = row:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
     row.lvlFs:SetPoint('RIGHT', row, 'RIGHT', -(SCROLL_BAR_WIDTH + 4), 0)
@@ -293,6 +344,9 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
         row.rankFs:SetTextColor(1, 0.95, 0.5)
         row.nameFs:SetTextColor(1, 0.95, 0.5)
         row.apFs:SetTextColor(1, 0.92, 0.55)
+        row.enemiesFs:SetTextColor(1, 0.92, 0.55)
+        row.dungeonsFs:SetTextColor(1, 0.92, 0.55)
+        row.jumpsFs:SetTextColor(1, 0.92, 0.55)
         row.lvlFs:SetTextColor(1, 0.92, 0.55)
       else
         row:SetBackdrop({ bgFile = 'Interface\\Buttons\\WHITE8x8', edgeFile = nil, tile = false, edgeSize = 0 })
@@ -300,12 +354,18 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
         row.rankFs:SetTextColor(0.85, 0.85, 0.78)
         row.nameFs:SetTextColor(0.95, 0.95, 0.9)
         row.apFs:SetTextColor(0.9, 0.88, 0.82)
+        row.enemiesFs:SetTextColor(0.9, 0.88, 0.82)
+        row.dungeonsFs:SetTextColor(0.9, 0.88, 0.82)
+        row.jumpsFs:SetTextColor(0.9, 0.88, 0.82)
         row.lvlFs:SetTextColor(0.9, 0.88, 0.82)
       end
       local displayName = RaceLocked_LeaderboardDisplayName and RaceLocked_LeaderboardDisplayName(data.name) or data.name
       row.rankFs:SetText(tostring(i))
       row.nameFs:SetText(displayName)
       row.apFs:SetText(tostring(data.achievementPoints or 0))
+      row.enemiesFs:SetText(tostring(data.enemiesSlain or 0))
+      row.dungeonsFs:SetText(tostring(data.dungeonsCompleted or 0))
+      row.jumpsFs:SetText(tostring(data.playerJumps or 0))
       row.lvlFs:SetText(tostring(data.level))
     end
     for i = n + 1, #rowPool do
@@ -318,21 +378,33 @@ local function createLeaderboardPanel(parent, rows, rowTint, panelWidth, anchorS
   return panel
 end
 
+local manualRefreshInProgress = false
+
 local function applyGuildRosterSyncFromButton()
+  if InCombatLockdown and InCombatLockdown() then
+    return
+  end
+  if manualRefreshInProgress then
+    return
+  end
+  manualRefreshInProgress = true
   if GuildRoster then
     GuildRoster()
   end
-  local function tryMerge()
-    if RaceLocked_MergeGuildRosterIntoLeaderboard and RaceLocked_MergeGuildRosterIntoLeaderboard() then
-      if RaceLocked_NotifyLeaderboardDataChanged then
-        RaceLocked_NotifyLeaderboardDataChanged()
-      end
+  local function finishRefresh()
+    if RaceLocked_MergeGuildRosterIntoLeaderboard then
+      RaceLocked_MergeGuildRosterIntoLeaderboard(true)
     end
+    if RaceLocked_NotifyLeaderboardDataChanged then
+      RaceLocked_NotifyLeaderboardDataChanged()
+    end
+    manualRefreshInProgress = false
   end
-  tryMerge()
   if C_Timer and C_Timer.After then
-    C_Timer.After(0.2, tryMerge)
-    C_Timer.After(0.75, tryMerge)
+    -- One delayed pass gives GuildRoster time to populate without doing multiple expensive full-table rebuilds.
+    C_Timer.After(0.3, finishRefresh)
+  else
+    finishRefresh()
   end
 end
 
@@ -378,11 +450,14 @@ function RaceLocked_InitializeGuildLeaderboardTab(tabContents, tabIndex)
     syncBar:SetPoint('BOTTOMRIGHT', container, 'BOTTOMRIGHT', 0, 0)
 
     local syncBtn = CreateFrame('Button', nil, syncBar)
+    container.syncBtn = syncBtn
     syncBtn:SetSize(30, 30)
     syncBtn:SetPoint('BOTTOMRIGHT', syncBar, 'BOTTOMRIGHT', -4, -5)
-    syncBtn:SetNormalTexture('Interface\\Buttons\\UI-RefreshButton')
+    local refreshTex = 'Interface\\Buttons\\UI-RefreshButton'
+    local combatTex = 'Interface\\Buttons\\UI-GroupLoot-Pass-Up'
+    syncBtn:SetNormalTexture(refreshTex)
     syncBtn:SetHighlightTexture('Interface\\Buttons\\ButtonHilight-Square', 'ADD')
-    syncBtn:SetPushedTexture('Interface\\Buttons\\UI-RefreshButton')
+    syncBtn:SetPushedTexture(refreshTex)
     syncBtn:SetScript('OnEnter', function(self)
       GameTooltip:SetOwner(self, 'ANCHOR_LEFT')
       GameTooltip:SetText('Refetch guild data', 1, 1, 1)
@@ -390,6 +465,28 @@ function RaceLocked_InitializeGuildLeaderboardTab(tabContents, tabIndex)
     end)
     syncBtn:SetScript('OnLeave', GameTooltip_Hide)
     syncBtn:SetScript('OnClick', applyGuildRosterSyncFromButton)
+
+    local function updateSyncBtnCombatState()
+      if InCombatLockdown and InCombatLockdown() then
+        syncBtn:SetNormalTexture(combatTex)
+        syncBtn:SetPushedTexture(combatTex)
+        syncBtn:SetDisabledTexture(combatTex)
+        syncBtn:Disable()
+        syncBtn:SetAlpha(0.75)
+      else
+        syncBtn:SetNormalTexture(refreshTex)
+        syncBtn:SetPushedTexture(refreshTex)
+        syncBtn:SetDisabledTexture(refreshTex)
+        syncBtn:Enable()
+        syncBtn:SetAlpha(1)
+      end
+    end
+
+    local combatWatcher = CreateFrame('Frame', nil, syncBar)
+    combatWatcher:RegisterEvent('PLAYER_REGEN_DISABLED')
+    combatWatcher:RegisterEvent('PLAYER_REGEN_ENABLED')
+    combatWatcher:SetScript('OnEvent', updateSyncBtnCombatState)
+    updateSyncBtnCombatState()
   end
 
   if not container.leaderboardPanel then

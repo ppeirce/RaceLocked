@@ -41,6 +41,8 @@ function RaceLocked_ApplyGuildRosterRowToLeaderboard(row)
     playerId = row.playerId,
     level = level,
     achievementPoints = normalizeRosterAchievementPoints(row.achievementPoints),
+    dungeonsCompleted = tonumber(row.dungeonsCompleted) or 0,
+    playerJumps = tonumber(row.playerJumps) or 0,
     lastSeen = time and time() or 0,
   }
   return true

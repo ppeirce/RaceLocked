@@ -56,7 +56,7 @@ end
 
 local innerW = contentWidth(FRAME_WIDTH)
 
--- #, Name, Achievement Points, Lvl — packs to width `w`
+-- #, Name, AP, Lvl — packs to width `w`
 local function layoutRowColumns(w)
   w = math.max(80, math.floor(w + 0.5))
   local lEdge, rEdge, gapRN = 1, 2, 1
@@ -66,20 +66,19 @@ local function layoutRowColumns(w)
   local mid = w - rEdge - xName - colLvlW - gapRN
   local colApW = math.floor(math.max(36, math.min(80, w * 0.23)))
   local colNameW = mid - colApW
-  if colNameW < 20 then
-    colNameW = 20
+  if colNameW < 22 then
+    colNameW = 22
     colApW = math.max(24, mid - colNameW)
   end
-  -- Wider achievements column, narrower name (same total mid).
   local AP_NAME_DELTA = 30
   colApW = colApW + AP_NAME_DELTA
   colNameW = colNameW - AP_NAME_DELTA
-  if colNameW < 20 then
-    colNameW = 20
+  if colNameW < 22 then
+    colNameW = 22
     colApW = math.max(24, mid - colNameW)
   end
   local xAp = xName + colNameW + gapRN
-  return colRankW, colNameW, colApW, colLvlW, lEdge, rEdge, gapRN, xName, xAp
+  return colRankW, colNameW, colApW, colLvlW, lEdge, rEdge, xName, xAp
 end
 
 local mainFrame = CreateFrame('Frame', 'RaceLockedMainLeaderboardFrame', UIParent, 'BackdropTemplate')
@@ -122,7 +121,7 @@ tableContentBg:SetBackdropColor(0.07, 0.06, 0.055, 1)
 
 -- Header inset matches table horizontal inset.
 local function buildTableHeader(parent, w)
-  local cr, cn, cap, cl, lEdge, rEdge, gapRN, xName, xAp = layoutRowColumns(w)
+  local cr, cn, cap, cl, lEdge, rEdge, xName, xAp = layoutRowColumns(w)
   local strip = CreateFrame('Frame', nil, parent, 'BackdropTemplate')
   strip:SetHeight(TABLE_HEADER_H)
   strip:SetPoint('TOPLEFT', parent, 'TOPLEFT', FRAME_PAD_LEFT, -FRAME_PAD_TOP)
@@ -146,7 +145,7 @@ local function buildTableHeader(parent, w)
   hAp:SetPoint('LEFT', strip, 'LEFT', xAp, 0)
   hAp:SetWidth(cap)
   hAp:SetJustifyH('LEFT')
-  hAp:SetText('Achievements')
+  hAp:SetText('Points')
   hAp:SetTextColor(1, 0.92, 0.62)
   local hLvl = strip:CreateFontString(nil, 'OVERLAY', 'GameFontNormalSmall')
   hLvl:SetPoint('RIGHT', strip, 'RIGHT', -(rEdge + LVL_PAD_RIGHT), 0)
@@ -160,7 +159,7 @@ end
 local tableHeader = buildTableHeader(mainFrame, innerW)
 
 local function makeDataRow(parent, w)
-  local cr, cn, cap, cl, lEdge, rEdge, gapRN, xName, xAp = layoutRowColumns(w)
+  local cr, cn, cap, cl, lEdge, rEdge, xName, xAp = layoutRowColumns(w)
   local row = CreateFrame('Frame', nil, parent, 'BackdropTemplate')
   row:SetHeight(ROW_H)
   setRowBackdropPlain(row)
@@ -274,6 +273,14 @@ local function refreshMainLeaderboard()
   applyMainScreenLeaderboardVisibility()
 end
 
+local function updateMainLeaderboardCombatInteraction()
+  if InCombatLockdown and InCombatLockdown() then
+    mainFrame:EnableMouse(false)
+  else
+    mainFrame:EnableMouse(true)
+  end
+end
+
 mainFrame:SetMovable(true)
 mainFrame:EnableMouse(true)
 mainFrame:RegisterForDrag('LeftButton')
@@ -300,7 +307,7 @@ mainFrame:SetScript('OnMouseUp', function(_, button)
     local dx = math.abs(x - mouseDownPos.x)
     local dy = math.abs(y - mouseDownPos.y)
     mouseDownPos = nil
-    if dx < 4 and dy < 4 and _G.ToggleRaceLockedSettings then
+    if dx < 4 and dy < 4 and (not InCombatLockdown or not InCombatLockdown()) and _G.ToggleRaceLockedSettings then
       _G.ToggleRaceLockedSettings()
     end
   end
@@ -324,9 +331,14 @@ end)
 
 mainFrame:RegisterEvent('PLAYER_LOGIN')
 mainFrame:RegisterEvent('PLAYER_LEVEL_UP')
+mainFrame:RegisterEvent('PLAYER_REGEN_DISABLED')
+mainFrame:RegisterEvent('PLAYER_REGEN_ENABLED')
 mainFrame:SetScript('OnEvent', function(self, event)
   if event == 'PLAYER_LOGIN' or event == 'PLAYER_LEVEL_UP' then
+    updateMainLeaderboardCombatInteraction()
     refreshMainLeaderboard()
+  elseif event == 'PLAYER_REGEN_DISABLED' or event == 'PLAYER_REGEN_ENABLED' then
+    updateMainLeaderboardCombatInteraction()
   end
 end)
 

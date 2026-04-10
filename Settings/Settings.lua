@@ -26,7 +26,7 @@ end
 local settingsFrame =
   CreateFrame('Frame', 'RaceLockedSettingsFrame', UIParent, 'BackdropTemplate')
 tinsert(UISpecialFrames, 'RaceLockedSettingsFrame')
-local SETTINGS_FRAME_WIDTH = 388
+local SETTINGS_FRAME_WIDTH = 540
 local SETTINGS_FRAME_HEIGHT = 580
 settingsFrame:SetSize(SETTINGS_FRAME_WIDTH, SETTINGS_FRAME_HEIGHT)
 settingsFrame:SetMovable(true)
