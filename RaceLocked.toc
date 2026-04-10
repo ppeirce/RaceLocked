@@ -1,6 +1,6 @@
 ## Interface: 11508, 20505
 ## Title: Race Locked
-## Version: 1.0.0
+## Version: 1.0.1
 ## Author: BonniesDad
 ## Notes: Race Locked leaderboard and settings
 ## SavedVariablesPerCharacter: RaceLockedDB
