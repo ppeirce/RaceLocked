@@ -30,6 +30,7 @@ Display/MainMenu/Window/CreateRootFrame.lua
 Display/MainMenu/Window/RegisterResetMenuPosition.lua
 Display/MainMenu/Window/AttachBackgroundTexture.lua
 Display/MainMenu/Window/CreateTitleChrome.lua
+Display/MainMenu/Window/TabManager.lua
 Display/MainMenu/Window/BuildSettingsWindow.lua
 Display/MainMenu/Window/ToggleRaceLockedSettings.lua
 Display/MainMenu/Window/RegisterDataBroker.lua

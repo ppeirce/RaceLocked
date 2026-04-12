@@ -44,6 +44,9 @@ function RaceLocked_Settings_CreateTitleChrome(settingsFrame)
     if _G.HideConfirmationDialog then
       _G.HideConfirmationDialog()
     end
+    if RaceLocked_ResetTabState then
+      RaceLocked_ResetTabState()
+    end
     settingsFrame:Hide()
   end)
   closeButton:SetNormalTexture(tp .. '\\header-x.png')
