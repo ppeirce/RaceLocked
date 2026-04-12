@@ -211,6 +211,10 @@ function RaceLocked_SwitchToTab(index)
     end
   end
 
+  if index == 2 and RaceLocked_InitializeMainMenuSettingsTab then
+    RaceLocked_InitializeMainMenuSettingsTab(tabContents[index])
+  end
+
   if index == 3 and RaceLocked_InitializeGuildVerificationTab then
     RaceLocked_InitializeGuildVerificationTab(tabContents[index])
   end

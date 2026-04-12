@@ -1,5 +1,11 @@
-
 -- Language IDs from the client (see GetLanguageByIndex); map is keyed by RaceId / race file token.
+
+local function nativeLanguageOptionEnabled()
+  if RaceLocked_Options_GetNativeLanguageOnly then
+    return RaceLocked_Options_GetNativeLanguageOnly()
+  end
+  return true
+end
 local RACE_ID_TO_LANGUAGE_ID = {
     [1] = 7, -- Human → Common
     [2] = 1, -- Orc → Orcish
@@ -49,6 +55,9 @@ local function applyToAllChatEditBoxes(languageName, languageId)
 end
 
 local function EnforceRaceLanguage()
+    if not nativeLanguageOptionEnabled() then
+        return
+    end
     local _, raceFile, raceId = UnitRace("player")
     if not raceFile and not raceId then
         return
@@ -88,3 +97,7 @@ EnforceRaceLanguageFrame:SetScript("OnEvent", function(self, event, ...)
         scheduleEnforceRaceLanguage()
     end
 end)
+
+function RaceLocked_ApplyNativeLanguageOption()
+    scheduleEnforceRaceLanguage()
+end
