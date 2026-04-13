@@ -29,6 +29,9 @@ local function sanitizeGuildName(name)
 end
 
 local function buildPayload(raceToken, row)
+  if type(row) ~= 'table' then
+    return nil
+  end
   local c = row.classes or emptyClasses()
   return table.concat({
     'v1',
@@ -145,10 +148,13 @@ function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
 
   for raceToken, _ in pairs(G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE or {}) do
     local row = RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
+    print('row', row)
     if row and row.guildName and row.guildName ~= '' then
       local payload = buildPayload(raceToken, row)
-      print('Sending')
-      C_ChatInfo.SendAddonMessage(PREFIX, payload, 'CHANNEL', channelId)
+      if payload and payload ~= '' then
+        print('Sending')
+        C_ChatInfo.SendAddonMessage(PREFIX, payload, 'CHANNEL', channelId)
+      end
     end
   end
 end
