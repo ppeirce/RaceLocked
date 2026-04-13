@@ -429,6 +429,23 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
     local rosterRequested = false
 
     local function captureSnapshotAndRedraw()
+      local rosterCount = 0
+      if GetNumGuildMembers then
+        rosterCount = tonumber((select(1, GetNumGuildMembers(true)))) or 0
+        if rosterCount < 1 then
+          rosterCount = tonumber((select(1, GetNumGuildMembers()))) or 0
+        end
+      end
+      if rosterRequested and rosterCount < 100 then
+        refreshBtn:SetNormalTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
+        refreshBtn:SetPushedTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
+        refreshBtn:SetDisabledTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
+        refreshBtn:Enable()
+        refreshBtn:SetAlpha(1)
+        refreshBtn._isLoading = false
+        print('|cffffffffRace Locked|r: Roster is not yet loaded, please try again.') 
+        return
+      end
       if RaceLocked_GuildChampion_SaveRaceGridGuildSnapshotFromRoster then
         RaceLocked_GuildChampion_SaveRaceGridGuildSnapshotFromRoster(raceTokens)
       end
@@ -442,7 +459,7 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
       rosterRequested = true
     end
     if C_Timer and C_Timer.After then
-      local waitSeconds = rosterRequested and 5.0 or 0
+      local waitSeconds = rosterRequested and 2.0 or 0
       C_Timer.After(waitSeconds, function()
         captureSnapshotAndRedraw()
       end)

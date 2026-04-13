@@ -268,10 +268,44 @@ local function applyGuildRosterSyncFromButton()
     syncBtn:SetAlpha(0.75)
   end
 
-  if GuildRoster then
+  local inGuild = IsInGuild and IsInGuild()
+  local rosterRequested = false
+  if inGuild and GuildRoster then
     GuildRoster()
+    rosterRequested = true
   end
   local function finishRefresh()
+    if rosterRequested then
+      local rosterCount = 0
+      if GetNumGuildMembers then
+        rosterCount = tonumber((select(1, GetNumGuildMembers(true)))) or 0
+        if rosterCount < 1 then
+          rosterCount = tonumber((select(1, GetNumGuildMembers()))) or 0
+        end
+      end
+      if rosterCount < 100 then
+        if syncBtn then
+          local refreshTex = syncBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton'
+          local isInCombat = InCombatLockdown and InCombatLockdown()
+          if isInCombat then
+            local combatTex = syncBtn._combatTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Up'
+            syncBtn:SetNormalTexture(combatTex)
+            syncBtn:SetPushedTexture(combatTex)
+            syncBtn:SetDisabledTexture(combatTex)
+            syncBtn:Disable()
+            syncBtn:SetAlpha(0.75)
+          else
+            syncBtn:SetNormalTexture(refreshTex)
+            syncBtn:SetPushedTexture(refreshTex)
+            syncBtn:SetDisabledTexture(refreshTex)
+            syncBtn:Enable()
+            syncBtn:SetAlpha(1)
+          end
+        end
+        manualRefreshInProgress = false
+        return
+      end
+    end
     if RaceLocked_GuildVerificationTab_Refresh then
       RaceLocked_GuildVerificationTab_Refresh()
     end
@@ -296,7 +330,8 @@ local function applyGuildRosterSyncFromButton()
     manualRefreshInProgress = false
   end
   if C_Timer and C_Timer.After then
-    C_Timer.After(5, finishRefresh)
+    local waitSeconds = rosterRequested and 2.0 or 0
+    C_Timer.After(waitSeconds, finishRefresh)
   else
     finishRefresh()
   end
