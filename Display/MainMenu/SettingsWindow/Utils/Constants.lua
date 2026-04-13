@@ -20,6 +20,6 @@ S.CLASS_BACKGROUND_MAP = {
 
 S.CLASS_BACKGROUND_ASPECT_RATIO = 1200 / 700
 
--- Tall enough for wrapped explainer + footer under the grid without clipping (see SetClipsChildren on frame).
+-- Main settings window outer size (see CreateRootFrame).
 S.FRAME_WIDTH = 490
-S.FRAME_HEIGHT = 540
+S.FRAME_HEIGHT = 510

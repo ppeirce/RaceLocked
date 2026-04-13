@@ -1,5 +1,5 @@
--- Live roster slice for the race grid: your guild's members of a given API race token (class counts + average level).
--- Not used for addon messages; call when building merged race-cell data for the player's race pane.
+-- Guild roster slice for the race grid: members of a given API race token in your guild (class counts + average level).
+-- `RaceLocked_GetGuildRaceGridReportForRaceToken` scans the roster; snapshots persist via `RaceGridGuildSnapshot.lua`.
 
 RaceLocked_GuildChampion = RaceLocked_GuildChampion or {}
 local G = RaceLocked_GuildChampion
@@ -67,17 +67,14 @@ local function resolveGuidFromRosterRow(index, guid17)
   return nil
 end
 
---- @param raceToken string UnitRace English token (e.g. Human, NightElf, Scourge)
---- @return table|nil row { guildName, guildSize, averageLevel, classes } or nil if not applicable / no data
-function RaceLocked_GetPlayerGuildRaceGridReportForRaceToken(raceToken)
+--- Guild roster slice for one API race token (all guild members of that race in your guild).
+--- @param raceToken string e.g. Human, NightElf, Scourge
+--- @return table|nil row { guildName, guildSize, averageLevel, classes } or nil if not in a guild / no members of that race
+function RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
   if not raceToken or raceToken == '' then
     return nil
   end
   if not IsInGuild or not IsInGuild() or not GetGuildInfo or not GetGuildRosterInfo then
-    return nil
-  end
-  local _, playerRaceEn = UnitRace and UnitRace('player')
-  if not playerRaceEn or playerRaceEn == '' or not raceTokensMatch(playerRaceEn, raceToken) then
     return nil
   end
   local guildName = GetGuildInfo('player')
@@ -96,14 +93,18 @@ function RaceLocked_GetPlayerGuildRaceGridReportForRaceToken(raceToken)
   local playerShort = UnitName('player') and stripRealmFromRosterName(UnitName('player')) or ''
 
   for i = 1, total do
-    local name, _, _, level, _, _, _, _, _, _, classFile, _, _, _, _, _, guid17 = GetGuildRosterInfo(i)
+    -- Returns (warcraft.wiki.gg): … class (11), …, guid (17) — not an 18th slot.
+    local name, _, _, level, _, _, _, _, _, _, classFile, _, _, _, _, guid17 = GetGuildRosterInfo(i)
     local levelNum = tonumber(level) or 0
     local guid = resolveGuidFromRosterRow(i, guid17)
 
     local engRace = nil
     local engClass = nil
     if guid and guid ~= '' and GetPlayerInfoByGUID then
-      _, engClass, _, engRace = GetPlayerInfoByGUID(guid)
+      -- localizedClass, englishClass, localizedRace, englishRace (e.g. NightElf)
+      local _, classTok, _, raceTok = GetPlayerInfoByGUID(guid)
+      engClass = classTok
+      engRace = raceTok
     end
 
     if not engRace and name and playerShort ~= '' then
@@ -135,7 +136,19 @@ function RaceLocked_GetPlayerGuildRaceGridReportForRaceToken(raceToken)
   return {
     guildName = guildName:match('^%s*(.-)%s*$') or guildName,
     guildSize = n,
-    averageLevel = sumLevel > 0 and (sumLevel / n) or nil,
+    -- Always a number when n > 0 so merge/weighting can show a level (even if roster levels read as 0).
+    averageLevel = n > 0 and (sumLevel / n) or nil,
     classes = classes,
   }
+end
+
+--- Same as `RaceLocked_GetGuildRaceGridReportForRaceToken` but only when `raceToken` is the player's race (legacy callers).
+--- @param raceToken string
+--- @return table|nil
+function RaceLocked_GetPlayerGuildRaceGridReportForRaceToken(raceToken)
+  local _, playerRaceEn = UnitRace and UnitRace('player')
+  if not playerRaceEn or playerRaceEn == '' or not raceTokensMatch(playerRaceEn, raceToken) then
+    return nil
+  end
+  return RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
 end

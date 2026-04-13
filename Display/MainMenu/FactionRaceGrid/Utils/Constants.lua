@@ -23,10 +23,14 @@ G.CLASS_BAR_HOST_H = G.CLASS_BAR_HEIGHT
   + 2 * G.CLASS_BAR_BORDER_PAD
   + G.CLASS_BAR_PCT_GAP
   + G.CLASS_BAR_LABEL_ROW
--- Pane height: chart + bar border; +6 for GameFontHighlightLarge race name vs old small header.
-G.STATS_ROW_H = 172 + 2 * G.CLASS_BAR_BORDER_PAD + 6
+-- Extra vertical space between **sections** (after race name, after guild list, after level value).
+-- Not applied between a subheading and its value (guild title→names, avg label→number, class label→bar).
+G.RACE_GRID_PANE_SECTION_GAP = 5
+-- Pane height: chart + bar border; +6 for race title; +3 section gaps (see layoutRaceGridPane).
+-- Base (147) includes a little room below the class bar; trim here to tighten bottom padding.
+G.STATS_ROW_H = 147 + 2 * G.CLASS_BAR_BORDER_PAD + 6 + 3 * G.RACE_GRID_PANE_SECTION_GAP
 G.ROW_GAP = 6
-G.GAP_AFTER_GRID = 6
+G.GAP_AFTER_GRID = 11
 G.REFRESH_ROW_H = 26
 G.EXPLAIN_TOP_GAP = 8
 G.FOOTER_TOP_GAP = 8

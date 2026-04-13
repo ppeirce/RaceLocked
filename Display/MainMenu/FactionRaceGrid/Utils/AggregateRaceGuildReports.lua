@@ -75,8 +75,8 @@ function RaceLocked_GuildChampion_AggregateGuildsForRace(entries)
   }
 end
 
---- Merge stored guild rows for this race (excluding your guild slot — live roster replaces it) with your
---- guild slice from `RaceLocked_GetPlayerGuildRaceGridReportForRaceToken` when applicable.
+--- Merge hardcoded stored guild rows with the last manual roster snapshot (`RaceLockedDB.raceGridGuildSnapshot`)
+--- for your guild (see `RaceLocked_GuildChampion_SaveRaceGridGuildSnapshotFromRoster`).
 --- @param raceToken string
 --- @return table|nil
 function RaceLocked_GuildChampion_GetAggregatedMockForRace(raceToken)
@@ -90,9 +90,9 @@ function RaceLocked_GuildChampion_GetAggregatedMockForRace(raceToken)
       end
     end
   end
-  local live = RaceLocked_GetPlayerGuildRaceGridReportForRaceToken and RaceLocked_GetPlayerGuildRaceGridReportForRaceToken(raceToken)
-  if live then
-    merged[#merged + 1] = live
+  local snapRow = RaceLocked_GuildChampion_GetSnapshotGuildRowForRace and RaceLocked_GuildChampion_GetSnapshotGuildRowForRace(raceToken)
+  if snapRow then
+    merged[#merged + 1] = snapRow
   end
   local agg = RaceLocked_GuildChampion_AggregateGuildsForRace(merged)
   local namesText = RaceLocked_GuildChampion_HardcodedGuildNamesTextForRace(raceToken)

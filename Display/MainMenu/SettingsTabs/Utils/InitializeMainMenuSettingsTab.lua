@@ -111,7 +111,7 @@ function RaceLocked_InitializeMainMenuSettingsTab(content)
   langRow:SetPoint('TOPLEFT', body, 'TOPLEFT', ROW_BUTTON_PAD_H, -10)
   langRow:SetPoint('TOPRIGHT', body, 'TOPRIGHT', -ROW_BUTTON_PAD_H, -10)
   langRow.Text:SetText('Native language only')
-  langRow:SetDescription('When enabled, chat input is set to your race default language (e.g. Orcish, Common).')
+  langRow:SetDescription('When enabled, chat input is set to your race native language.')
   langRow:SetChecked(RaceLocked_Options_GetNativeLanguageOnly and RaceLocked_Options_GetNativeLanguageOnly() or true)
 
   langRow.Check:SetScript('OnClick', function(btn)

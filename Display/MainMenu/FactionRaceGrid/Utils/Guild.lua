@@ -1,42 +1,5 @@
---- Mean level across current guild roster rows (nil if not in a guild or roster empty).
---- @return number|nil
-function RaceLocked_GuildChampion_GetGuildAverageLevel()
-  if not IsInGuild or not IsInGuild() then
-    return nil
-  end
-  local total = select(1, GetNumGuildMembers(true))
-  if not total or total < 1 then
-    total = select(1, GetNumGuildMembers())
-  end
-  total = tonumber(total) or 0
-  if total < 1 then
-    return nil
-  end
-  local sum = 0
-  local n = 0
-  for i = 1, total do
-    local _, _, _, level = GetGuildRosterInfo(i)
-    local lv = tonumber(level)
-    if lv and lv >= 1 then
-      sum = sum + lv
-      n = n + 1
-    end
-  end
-  if n < 1 then
-    return nil
-  end
-  return sum / n
-end
 
-function RaceLocked_GuildChampion_PrintGuildAverageAfterRefresh()
-  local avg = RaceLocked_GuildChampion_GetGuildAverageLevel()
-  if avg then
-    local n = math.floor(avg + 0.5)
-    print(string.format('|cfffcdd76[Race Locked]|r Guild roster average: |cffffffff%d|r', n))
-  else
-    print('|cfff44336[Race Locked]|r No guild roster average (not in a guild or empty roster).')
-  end
-end
+
 
 --- @param classKey string e.g. warriors
 --- @return number r, number g, number b
@@ -190,8 +153,9 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
     local pane = panes[i]
     local token = raceTokens[i]
     local agg = RaceLocked_GuildChampion_GetAggregatedMockForRace and RaceLocked_GuildChampion_GetAggregatedMockForRace(token)
+    local subR, subG, subB = G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85
     pane._guildSectionTitle:SetText(G.RACE_GRID_GUILD_SECTION_TITLE)
-    pane._guildSectionTitle:SetTextColor(G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85)
+    pane._guildSectionTitle:SetTextColor(subR, subG, subB)
 
     if agg and agg.guildNamesText and agg.guildNamesText ~= '' then
       pane._guildNames:SetText(agg.guildNamesText)
@@ -202,7 +166,7 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
     end
 
     pane._avgSubtitle:SetText(G.RACE_GRID_AVG_SUBTITLE)
-    pane._avgSubtitle:SetTextColor(G.MUTED[1], G.MUTED[2], G.MUTED[3])
+    pane._avgSubtitle:SetTextColor(subR, subG, subB)
 
     local det = pane._detailFs
     if agg and agg.averageLevel then
@@ -214,7 +178,7 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
     end
 
     pane._classSubtitle:SetText(G.RACE_GRID_CLASS_SUBTITLE)
-    pane._classSubtitle:SetTextColor(G.MUTED[1], G.MUTED[2], G.MUTED[3])
+    pane._classSubtitle:SetTextColor(subR, subG, subB)
 
     local classes = (agg and agg.classes) or {}
     local keys = G.RACE_TOKEN_TO_CLASS_KEYS[token] or {}

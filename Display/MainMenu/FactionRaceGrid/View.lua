@@ -44,6 +44,10 @@ local function createRaceStatPane(root, raceToken, raceAccent)
   lbl:SetJustifyH('LEFT')
   lbl:SetTextColor(G.LABEL_GOLD[1] * 0.9, G.LABEL_GOLD[2] * 0.9, G.LABEL_GOLD[3] * 0.9)
 
+  f._rankFs = f:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
+  f._rankFs:SetJustifyH('RIGHT')
+  f._rankFs:SetTextColor(G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85)
+
   local det = f:CreateFontString(nil, 'OVERLAY', 'GameFontHighlight')
   det:SetJustifyH('LEFT')
   det:SetText('—')
@@ -131,6 +135,7 @@ end
 --- @param raceToken string UnitRace token for class availability
 local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
   local G = RaceLocked_GuildChampion
+  local lg = G.RACE_GRID_PANE_SECTION_GAP or 0
   local w = pane:GetWidth() - tx - G.INNER_PAD
   w = math.max(w, 48)
   -- Class bar: full inner width of the cell (not aligned to text column after the icon).
@@ -140,11 +145,12 @@ local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
 
   labelFs:ClearAllPoints()
   labelFs:SetPoint('TOPLEFT', pane, 'TOPLEFT', tx, -4)
-  labelFs:SetWidth(w)
+  local labelW = pane._rankFs and math.max(40, w - 40) or w
+  labelFs:SetWidth(labelW)
 
   local guildH = pane._guildSectionTitle
   guildH:ClearAllPoints()
-  guildH:SetPoint('TOPLEFT', labelFs, 'BOTTOMLEFT', barLeft - tx, -20)
+  guildH:SetPoint('TOPLEFT', labelFs, 'BOTTOMLEFT', barLeft - tx, -(20 + lg))
   guildH:SetWidth(barW)
 
   local gNames = pane._guildNames
@@ -154,7 +160,7 @@ local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
 
   local avgSub = pane._avgSubtitle
   avgSub:ClearAllPoints()
-  avgSub:SetPoint('TOPLEFT', gNames, 'BOTTOMLEFT', 0, -5)
+  avgSub:SetPoint('TOPLEFT', gNames, 'BOTTOMLEFT', 0, -(5 + lg))
   avgSub:SetWidth(barW)
 
   detailFs:ClearAllPoints()
@@ -163,7 +169,7 @@ local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
 
   local cSub = pane._classSubtitle
   cSub:ClearAllPoints()
-  cSub:SetPoint('TOPLEFT', detailFs, 'BOTTOMLEFT', 0, -6)
+  cSub:SetPoint('TOPLEFT', detailFs, 'BOTTOMLEFT', 0, -(6 + lg))
   cSub:SetWidth(barW)
 
   local host = pane._classBarHost
@@ -190,9 +196,39 @@ local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
   row:SetPoint('TOPLEFT', well, 'TOPLEFT', 0, -pad)
   row:SetPoint('TOPRIGHT', well, 'TOPRIGHT', 0, -pad)
   row:SetHeight(G.CLASS_BAR_HEIGHT)
+
+  if pane._rankFs then
+    pane._rankFs:ClearAllPoints()
+    pane._rankFs:SetPoint('TOPRIGHT', pane, 'TOPRIGHT', -G.INNER_PAD, -4)
+  end
 end
 
---- Lay out the faction race grid: 2×2 panes and refresh row; updates root height and refreshes numbers.
+--- Sort key: higher average first; ties keep stable order by race index.
+local function computeRaceGridSortOrder(raceTokens)
+  local rows = {}
+  for i = 1, 4 do
+    local token = raceTokens[i]
+    local agg = RaceLocked_GuildChampion_GetAggregatedMockForRace and RaceLocked_GuildChampion_GetAggregatedMockForRace(token)
+    local avg = agg and agg.averageLevel
+    local avn = type(avg) == 'number' and avg or -math.huge
+    rows[#rows + 1] = { idx = i, avg = avn }
+  end
+  table.sort(rows, function(a, b)
+    if a.avg ~= b.avg then
+      return a.avg > b.avg
+    end
+    return a.idx < b.idx
+  end)
+  local order = {}
+  local rankByIdx = {}
+  for slot = 1, 4 do
+    order[slot] = rows[slot].idx
+    rankByIdx[rows[slot].idx] = slot
+  end
+  return order, rankByIdx
+end
+
+--- Lay out the faction race grid: 2×2 panes (sorted by average level) and refresh row.
 --- @param ctx table
 local function layoutGrid(ctx)
   local G = RaceLocked_GuildChampion
@@ -215,21 +251,28 @@ local function layoutGrid(ctx)
   local gridTop = G.OUTER_PAD_Y + G.GRID_TOP_OFFSET
 
   local panes = ctx.panes
-  panes[1]:ClearAllPoints()
-  panes[1]:SetPoint('TOPLEFT', root, 'TOPLEFT', 0, -gridTop)
-  panes[1]:SetSize(wLeft, G.STATS_ROW_H)
+  local raceTokens = ctx.raceTokens
 
-  panes[2]:ClearAllPoints()
-  panes[2]:SetPoint('TOPLEFT', panes[1], 'TOPRIGHT', G.MID_GAP, 0)
-  panes[2]:SetSize(wRight, G.STATS_ROW_H)
+  local order, rankByIdx = computeRaceGridSortOrder(raceTokens)
+  ctx.sortOrder = order
 
-  panes[3]:ClearAllPoints()
-  panes[3]:SetPoint('TOPLEFT', panes[1], 'BOTTOMLEFT', 0, -G.ROW_GAP)
-  panes[3]:SetSize(wLeft, G.STATS_ROW_H)
+  local o1, o2, o3, o4 = order[1], order[2], order[3], order[4]
 
-  panes[4]:ClearAllPoints()
-  panes[4]:SetPoint('TOPLEFT', panes[3], 'TOPRIGHT', G.MID_GAP, 0)
-  panes[4]:SetSize(wRight, G.STATS_ROW_H)
+  panes[o1]:ClearAllPoints()
+  panes[o1]:SetPoint('TOPLEFT', root, 'TOPLEFT', 0, -gridTop)
+  panes[o1]:SetSize(wLeft, G.STATS_ROW_H)
+
+  panes[o2]:ClearAllPoints()
+  panes[o2]:SetPoint('TOPLEFT', panes[o1], 'TOPRIGHT', G.MID_GAP, 0)
+  panes[o2]:SetSize(wRight, G.STATS_ROW_H)
+
+  panes[o3]:ClearAllPoints()
+  panes[o3]:SetPoint('TOPLEFT', panes[o1], 'BOTTOMLEFT', 0, -G.ROW_GAP)
+  panes[o3]:SetSize(wLeft, G.STATS_ROW_H)
+
+  panes[o4]:ClearAllPoints()
+  panes[o4]:SetPoint('TOPLEFT', panes[o3], 'TOPRIGHT', G.MID_GAP, 0)
+  panes[o4]:SetSize(wRight, G.STATS_ROW_H)
 
   local icons = ctx.icons
   for j = 1, 4 do
@@ -243,11 +286,14 @@ local function layoutGrid(ctx)
   local tx = textLeftOffset()
   for i = 1, 4 do
     layoutRaceGridPane(panes[i], ctx.labels[i], ctx.details[i], tx, ctx.raceTokens[i])
+    if panes[i]._rankFs then
+      panes[i]._rankFs:SetText('#' .. tostring(rankByIdx[i]))
+    end
   end
 
   ctx.refreshRow:ClearAllPoints()
-  ctx.refreshRow:SetPoint('TOPLEFT', panes[3], 'BOTTOMLEFT', 0, -G.GAP_AFTER_GRID)
-  ctx.refreshRow:SetPoint('TOPRIGHT', panes[4], 'BOTTOMRIGHT', 0, -G.GAP_AFTER_GRID)
+  ctx.refreshRow:SetPoint('TOPLEFT', panes[o3], 'BOTTOMLEFT', 0, -G.GAP_AFTER_GRID)
+  ctx.refreshRow:SetPoint('TOPRIGHT', panes[o4], 'BOTTOMRIGHT', 0, -G.GAP_AFTER_GRID)
 
   local newH = gridTop
     + G.STATS_ROW_H * 2
@@ -342,31 +388,22 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
   end
 
   refreshBtn:SetScript('OnClick', function()
+    local function captureSnapshotAndRedraw()
+      if RaceLocked_GuildChampion_SaveRaceGridGuildSnapshotFromRoster then
+        RaceLocked_GuildChampion_SaveRaceGridGuildSnapshotFromRoster(raceTokens)
+      end
+      RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
+    end
     if GuildRoster then
       GuildRoster()
     end
-    RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
     if C_Timer and C_Timer.After then
-      C_Timer.After(0, function()
-        RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
-        RaceLocked_GuildChampion_PrintGuildAverageAfterRefresh()
+      C_Timer.After(0.2, function()
+        captureSnapshotAndRedraw()
       end)
-    else
-      RaceLocked_GuildChampion_PrintGuildAverageAfterRefresh()
     end
   end)
 
-  if GuildRoster then
-    GuildRoster()
-  end
-
-  root:RegisterEvent('GUILD_ROSTER_UPDATE')
-  root:RegisterEvent('PLAYER_GUILD_UPDATE')
-  root:SetScript('OnEvent', function(_, event)
-    if event == 'PLAYER_GUILD_UPDATE' or event == 'GUILD_ROSTER_UPDATE' then
-      RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
-    end
-  end)
 
   root:SetScript('OnSizeChanged', runLayout)
   root:SetScript('OnShow', function()
