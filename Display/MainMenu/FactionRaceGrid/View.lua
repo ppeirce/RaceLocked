@@ -429,49 +429,32 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
     local rosterRequested = false
 
     local function captureSnapshotAndRedraw()
-      local rosterCount = 0
-      if GetNumGuildMembers then
-        rosterCount = tonumber((select(1, GetNumGuildMembers(true)))) or 0
-        if rosterCount < 1 then
-          rosterCount = tonumber((select(1, GetNumGuildMembers()))) or 0
+      if inGuild and RaceLocked_GuildChampion_GetGuildRosterMemberCount then
+        local n = RaceLocked_GuildChampion_GetGuildRosterMemberCount()
+        local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
+        if rosterRequested and n < 1 then
+          print('|cffffffffRace Locked|r: Roster is not yet loaded, please try again.')
+          return false
         end
-      end
-      if rosterRequested and rosterCount < 100 then
-        refreshBtn:SetNormalTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
-        refreshBtn:SetPushedTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
-        refreshBtn:SetDisabledTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
-        refreshBtn:Enable()
-        refreshBtn:SetAlpha(1)
-        refreshBtn._isLoading = false
-        print('|cffffffffRace Locked|r: Roster is not yet loaded, please try again.') 
-        return
+        if n < minN then
+          print(
+            string.format(
+              '|cffffffffRace Locked|r: Race grid refresh and data bus need at least %d guild members (current: %d).',
+              minN,
+              n
+            )
+          )
+          return false
+        end
       end
       if RaceLocked_GuildChampion_SaveRaceGridGuildSnapshotFromRoster then
         RaceLocked_GuildChampion_SaveRaceGridGuildSnapshotFromRoster(raceTokens)
       end
-      if rosterRequested and inGuild and RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports then
-        RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
-      end
       runLayout()
+      return true
     end
-    if inGuild and GuildRoster then
-      GuildRoster()
-      rosterRequested = true
-    end
-    if C_Timer and C_Timer.After then
-      local waitSeconds = rosterRequested and 2.0 or 0
-      C_Timer.After(waitSeconds, function()
-        captureSnapshotAndRedraw()
-      end)
-      C_Timer.After(waitSeconds, function()
-        refreshBtn:SetNormalTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
-        refreshBtn:SetPushedTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
-        refreshBtn:SetDisabledTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
-        refreshBtn:Enable()
-        refreshBtn:SetAlpha(1)
-        refreshBtn._isLoading = false
-      end)
-    else
+
+    local function finishRefreshButton()
       refreshBtn:SetNormalTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
       refreshBtn:SetPushedTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
       refreshBtn:SetDisabledTexture(refreshBtn._refreshTex or 'Interface\\Buttons\\UI-RefreshButton')
@@ -479,8 +462,20 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
       refreshBtn:SetAlpha(1)
       refreshBtn._isLoading = false
     end
-  end)
 
+    if inGuild and GuildRoster then
+      GuildRoster()
+      rosterRequested = true
+    end
+
+    -- No refresh timer: roster still loading or under min size skips save/UI/broadcast; user clicks again when ready.
+    -- SendChatMessage to CHANNEL is protected — broadcast only runs here on the same stack as this click.
+    local ok = captureSnapshotAndRedraw()
+    if ok and RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports then
+      RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
+    end
+    finishRefreshButton()
+  end)
 
   root:SetScript('OnSizeChanged', runLayout)
   root:SetScript('OnShow', function()

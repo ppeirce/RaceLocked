@@ -105,6 +105,9 @@ G.RACE_GRID_CLASS_SUBTITLE = 'Class breakdown'
 G.RACE_GRID_TRUSTED_GUILDS_TITLE = 'Guild names accepted for addon-reported data:'
 G.TRUSTED_GUILDS_TITLE_TOP_GAP = 6
 
+--- Roster size required to refresh the race grid from guild data or publish to the data bus (in-guild only).
+G.MIN_GUILD_MEMBERS_FOR_RACE_GRID = 100
+
 --- Display order for class keys (matches stored payload keys).
 G.CLASS_REPORT_KEYS = {
   { key = 'druids', label = 'Druid' },

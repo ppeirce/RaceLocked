@@ -85,9 +85,9 @@ function RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
   local classes = emptyClasses()
   local sumLevel = 0
   local n = 0
-  local total = select(1, GetNumGuildMembers(true))
-  if not total or total < 1 then
-    total = select(1, GetNumGuildMembers())
+  local total = GetNumGuildMembers(true)
+  if not total or tonumber(total) < 1 then
+    total = GetNumGuildMembers()
   end
   total = tonumber(total) or 0
   local playerShort = UnitName('player') and stripRealmFromRosterName(UnitName('player')) or ''
@@ -151,4 +151,30 @@ function RaceLocked_GetPlayerGuildRaceGridReportForRaceToken(raceToken)
     return nil
   end
   return RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
+end
+
+--- Total guild roster rows (online-first count, then full roster), for race grid gating.
+--- @return number
+function RaceLocked_GuildChampion_GetGuildRosterMemberCount()
+  if not GetNumGuildMembers then
+    return 0
+  end
+  -- Do not use tonumber(select(1, GetNumGuildMembers())): select returns all tail values, so tonumber would get a bogus radix.
+  local total = GetNumGuildMembers(true)
+  total = tonumber(total) or 0
+  if total < 1 then
+    total = GetNumGuildMembers()
+    total = tonumber(total) or 0
+  end
+  return total
+end
+
+--- When not in a guild, always true. When in a guild, true only if roster has at least MIN_GUILD_MEMBERS_FOR_RACE_GRID.
+--- @return boolean
+function RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid()
+  if not IsInGuild or not IsInGuild() then
+    return true
+  end
+  local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
+  return RaceLocked_GuildChampion_GetGuildRosterMemberCount() >= minN
 end

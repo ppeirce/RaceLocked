@@ -7,7 +7,35 @@ local thisAddonName = ...
 
 local PREFIX = 'RLRaceGridV1'
 local CHANNEL_NAME = 'RaceLockedDataBus'
+-- Internal field separator inside the payload (before hex encoding for chat).
+local WIRE_FIELD_SEP = '\001'
 local channelFiltersInstalled = false
+
+local function bytesToHex(s)
+  if type(s) ~= 'string' or s == '' then
+    return ''
+  end
+  local t = {}
+  for i = 1, #s do
+    t[i] = string.format('%02x', string.byte(s, i))
+  end
+  return table.concat(t)
+end
+
+local function hexToBytes(h)
+  if type(h) ~= 'string' or h == '' or #h % 2 ~= 0 then
+    return nil
+  end
+  local t = {}
+  for i = 1, #h, 2 do
+    local b = tonumber(string.sub(h, i, i + 1), 16)
+    if not b then
+      return nil
+    end
+    t[#t + 1] = string.char(b)
+  end
+  return table.concat(t)
+end
 
 local function emptyClasses()
   return {
@@ -23,9 +51,34 @@ local function emptyClasses()
   }
 end
 
+--- One-line class counts for debug prints (matches wire / CLASS_REPORT_KEYS order).
+local function formatClassesOneLine(classes)
+  if type(classes) ~= 'table' then
+    return '(no class breakdown)'
+  end
+  local bits = {}
+  local keys = G.CLASS_REPORT_KEYS
+  if type(keys) == 'table' then
+    for i = 1, #keys do
+      local entry = keys[i]
+      local k = entry and entry.key
+      if k then
+        local label = entry.label or k
+        local short = string.sub(tostring(label), 1, 3)
+        bits[#bits + 1] = string.format('%s=%d', short, tonumber(classes[k]) or 0)
+      end
+    end
+  end
+  if #bits < 1 then
+    return '(no class keys)'
+  end
+  return table.concat(bits, ', ')
+end
+
 local function sanitizeGuildName(name)
   local s = tostring(name or '')
   s = s:gsub('|', '/')
+  s = s:gsub(WIRE_FIELD_SEP, '')
   return s
 end
 
@@ -49,14 +102,36 @@ local function buildPayload(raceToken, row)
     tostring(tonumber(c.warlocks) or 0),
     tostring(tonumber(c.paladins) or 0),
     tostring(tonumber(c.shamans) or 0),
-  }, '|')
+  }, WIRE_FIELD_SEP)
 end
 
 local function parsePayload(msg)
   if type(msg) ~= 'string' or msg == '' then
     return nil
   end
-  local p = { strsplit('|', msg) }
+
+  local inner
+  local headHex = PREFIX .. ':'
+  if string.sub(msg, 1, #headHex) == headHex then
+    inner = hexToBytes(string.sub(msg, #headHex + 1))
+  else
+    -- Legacy: PREFIX|v1|... (pipes break SendChatMessage; still parse if another client sent it.)
+    local headLegacy = PREFIX .. '|'
+    if string.sub(msg, 1, #headLegacy) == headLegacy then
+      inner = string.sub(msg, #headLegacy + 1)
+    else
+      inner = msg
+    end
+  end
+
+  if type(inner) ~= 'string' or inner == '' then
+    return nil
+  end
+
+  local p = { strsplit(WIRE_FIELD_SEP, inner) }
+  if #p < 14 then
+    p = { strsplit('|', inner) }
+  end
   if #p < 14 then
     return nil
   end
@@ -169,6 +244,20 @@ local function installChannelNoticeFilters()
   end
   ChatFrame_AddMessageEventFilter('CHAT_MSG_CHANNEL_NOTICE', filterFn)
   ChatFrame_AddMessageEventFilter('CHAT_MSG_CHANNEL_NOTICE_USER', filterFn)
+
+  -- Hide normal channel lines on the data bus; we still handle them via CHAT_MSG_CHANNEL.
+  ChatFrame_AddMessageEventFilter('CHAT_MSG_CHANNEL', function(_, _, ...)
+    local channelIndex = select(8, ...)
+    local channelBaseName = select(9, ...)
+    if channelBaseName == CHANNEL_NAME then
+      return true
+    end
+    local id = tonumber(channelIndex) or 0
+    if id > 0 and id == getDataChannelId() then
+      return true
+    end
+    return false
+  end)
 end
 
 local function ensureDataChannelJoined()
@@ -188,11 +277,44 @@ local function ensureDataChannelJoined()
   return 0
 end
 
-function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
-  if not C_ChatInfo or not C_ChatInfo.SendAddonMessage then
+--- Classic does not support C_ChatInfo.SendAddonMessage(..., "CHANNEL", ...). Use SendChatMessage(..., "CHANNEL", channelIndex); there is no separate SendChannelMessage in this API.
+--- SendChatMessage to CHANNEL is protected: call only from a user-driven path (same stack as refresh click or /rlrgb).
+local function sendRaceGridChannelLine(channelId, payload, raceToken, classes)
+  if not SendChatMessage or channelId <= 0 or not payload or payload == '' then
     return
   end
+  -- Hex on the wire: no '|' (chat escapes) and no raw control bytes that might get altered.
+  local wire = PREFIX .. ':' .. bytesToHex(payload)
+  if #wire > 255 then
+    return
+  end
+  print(
+    string.format(
+      '|cffffffffRace Locked|r: race grid bus send race=%s channel=%d wireLen=%d classes %s',
+      tostring(raceToken or '?'),
+      channelId,
+      #wire,
+      formatClassesOneLine(classes)
+    )
+  )
+  SendChatMessage(wire, 'CHANNEL', nil, channelId)
+end
+
+local function isOurDataChannelMessage(...)
+  local channelIndex = select(8, ...)
+  local channelBaseName = select(9, ...)
+  if channelBaseName == CHANNEL_NAME then
+    return true
+  end
+  local id = tonumber(channelIndex) or 0
+  return id > 0 and id == getDataChannelId()
+end
+
+function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
   if not RaceLocked_GetGuildRaceGridReportForRaceToken then
+    return
+  end
+  if RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid and not RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid() then
     return
   end
   local channelId = ensureDataChannelJoined()
@@ -202,12 +324,10 @@ function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
 
   for raceToken, _ in pairs(G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE or {}) do
     local row = RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
-    print('row', row)
     if row and row.guildName and row.guildName ~= '' then
       local payload = buildPayload(raceToken, row)
       if payload and payload ~= '' then
-        print('Sending')
-        C_ChatInfo.SendAddonMessage(PREFIX, payload, 'CHANNEL', channelId)
+        sendRaceGridChannelLine(channelId, payload, raceToken, row.classes)
       end
     end
   end
@@ -215,13 +335,12 @@ end
 
 local service = CreateFrame('Frame')
 service:RegisterEvent('ADDON_LOADED')
-service:RegisterEvent('CHAT_MSG_ADDON')
+service:RegisterEvent('CHAT_MSG_CHANNEL')
 service:RegisterEvent('CHANNEL_UI_UPDATE')
-service:SetScript('OnEvent', function(_, event, a1, a2, a3)
+service:SetScript('OnEvent', function(_, event, ...)
   if event == 'ADDON_LOADED' then
-    local loadedAddonName = a1
-    if loadedAddonName == thisAddonName and C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
-      C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
+    local loadedAddonName = ...
+    if loadedAddonName == thisAddonName then
       installChannelNoticeFilters()
       ensureDataChannelJoined()
     end
@@ -231,16 +350,27 @@ service:SetScript('OnEvent', function(_, event, a1, a2, a3)
     ensureDataChannelJoined()
     return
   end
-  if event == 'CHAT_MSG_ADDON' then
-    local prefix, msg, channelType = a1, a2, a3
-    if prefix ~= PREFIX or channelType ~= 'CHANNEL' then
+  if event == 'CHAT_MSG_CHANNEL' then
+    if not isOurDataChannelMessage(...) then
       return
     end
+    local msg = select(1, ...)
+    local sender = select(2, ...)
     local report = parsePayload(msg)
     if not report then
       return
     end
-    print('Receiving')
+    print(
+      string.format(
+        '|cffffffffRace Locked|r: race grid bus recv from=%s race=%s guild=%s size=%d avg=%.2f classes %s',
+        tostring(sender or '?'),
+        tostring(report.raceToken or '?'),
+        tostring(report.guildName or '?'),
+        tonumber(report.guildSize) or 0,
+        tonumber(report.averageLevel) or 0,
+        formatClassesOneLine(report.classes)
+      )
+    )
     applyIncomingReport(report)
   end
 end)

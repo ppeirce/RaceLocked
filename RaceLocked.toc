@@ -54,6 +54,4 @@ Display/MainMenu/SettingsWindow/View.lua
 Display/MainMenu/MinimapBroker/Utils/EnsureMinimapSavedVars.lua
 Display/MainMenu/MinimapBroker/View.lua
 
-Display/MainMenu/SlashCommands/Index.lua
-
 Display/MainMenu/RaceLockedOptions/Index.lua
