@@ -111,28 +111,16 @@ local function parsePayload(msg)
     return nil
   end
 
-  local inner
   local headHex = PREFIX .. ':'
-  if string.sub(msg, 1, #headHex) == headHex then
-    inner = hexToBytes(string.sub(msg, #headHex + 1))
-  else
-    -- Legacy: PREFIX|v1|... (pipes break SendChatMessage; still parse if another client sent it.)
-    local headLegacy = PREFIX .. '|'
-    if string.sub(msg, 1, #headLegacy) == headLegacy then
-      inner = string.sub(msg, #headLegacy + 1)
-    else
-      inner = msg
-    end
+  if string.sub(msg, 1, #headHex) ~= headHex then
+    return nil
   end
-
+  local inner = hexToBytes(string.sub(msg, #headHex + 1))
   if type(inner) ~= 'string' or inner == '' then
     return nil
   end
 
   local p = { strsplit(WIRE_FIELD_SEP, inner) }
-  if #p < 14 then
-    p = { strsplit('|', inner) }
-  end
   if #p < 14 then
     return nil
   end
@@ -169,7 +157,6 @@ local function applyIncomingReport(report)
   if not report then
     return false
   end
-  print(report.guildSize)
   local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
   if (tonumber(report.guildSize) or 0) < minN then
     return false

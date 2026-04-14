@@ -10,7 +10,17 @@ local function createChrome(root)
   local refreshBtn = CreateFrame('Button', nil, refreshRow)
   refreshBtn:SetSize(30, 30)
   refreshBtn:SetPoint('BOTTOMRIGHT', refreshRow, 'BOTTOMRIGHT', -4, -5)
-  
+
+  local guildLoadFailFs = refreshRow:CreateFontString(nil, 'OVERLAY', 'GameFontNormalSmall')
+  guildLoadFailFs:SetPoint('RIGHT', refreshBtn, 'LEFT', -10, 0)
+  guildLoadFailFs:SetJustifyH('RIGHT')
+  guildLoadFailFs:SetWordWrap(true)
+  guildLoadFailFs:SetWidth(420)
+  guildLoadFailFs:SetTextColor(1, 0.42, 0.42)
+  guildLoadFailFs:SetText('Guild failed to load, try again')
+  guildLoadFailFs:Hide()
+  refreshRow._guildLoadFailFs = guildLoadFailFs
+
   local refreshTex = 'Interface\\Buttons\\UI-RefreshButton'
   local prepareTex = 'Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up'
   local loadingTex = 'Interface\\Buttons\\UI-GroupLoot-Pass-Down'
@@ -287,11 +297,10 @@ local function layoutGrid(ctx)
   local G = RaceLocked_GuildChampion
   local root = ctx.root
   local parent = ctx.parent
-  local rightInset = ctx.rightInset
 
   local rw = root:GetWidth()
   if (not rw or rw < 2) and parent and parent.GetWidth then
-    rw = math.max(0, parent:GetWidth() - rightInset)
+    rw = math.max(0, parent:GetWidth())
   end
   if rw < 80 then
     rw = 400
@@ -361,11 +370,9 @@ local function layoutGrid(ctx)
 end
 
 --- @param parent Frame
---- @param rightInset number|nil optional right inset (legacy; kept for call compatibility)
 --- @return Frame root
 --- @return number total height
-function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
-  rightInset = rightInset or 0
+function RaceLocked_CreateFactionRaceGrid(parent)
   local G = RaceLocked_GuildChampion
 
   local totalH = G.OUTER_PAD_Y
@@ -378,7 +385,7 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
 
   local root = CreateFrame('Frame', nil, parent)
   root:SetPoint('TOPLEFT', parent, 'TOPLEFT', 0, 0)
-  root:SetPoint('TOPRIGHT', parent, 'TOPRIGHT', -rightInset, 0)
+  root:SetPoint('TOPRIGHT', parent, 'TOPRIGHT', 0, 0)
   root:SetHeight(totalH)
 
   local refreshRow, refreshBtn = createChrome(root)
@@ -425,7 +432,6 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
   local layoutCtx = {
     root = root,
     parent = parent,
-    rightInset = rightInset,
     refreshRow = refreshRow,
     panes = panes,
     labels = labels,
@@ -446,9 +452,20 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
       return
     end
 
+    local function setGuildLoadFailVisible(show)
+      local fs = refreshRow._guildLoadFailFs
+      if not fs then
+        return
+      end
+      if show then
+        fs:Show()
+      else
+        fs:Hide()
+      end
+    end
+
     local inGuild = IsInGuild and IsInGuild()
-    --- Must not depend on RaceLocked_GuildChampion_GetGuildRosterMemberCount existing; if that global is nil the old
-    --- `if inGuild and RaceLocked_...` skipped the whole gate and the UI always refreshed.
+    --- Guild member count for min-size gates: use `RaceLocked_GuildChampion_GetGuildRosterMemberCount` when present, else `GetNumGuildMembers`.
     local function readGuildRosterMemberCountForGate()
       if RaceLocked_GuildChampion_GetGuildRosterMemberCount then
         return RaceLocked_GuildChampion_GetGuildRosterMemberCount()
@@ -478,9 +495,11 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
             )
           )
           refreshBtn._isPrepared = false
+          setGuildLoadFailVisible(true)
           return
         end
       end
+      setGuildLoadFailVisible(false)
       refreshBtn._isPreparing = true
       refreshBtn:SetNormalTexture(refreshBtn._loadingTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Down')
       refreshBtn:SetPushedTexture(refreshBtn._loadingTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Down')
@@ -496,6 +515,7 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
         refreshBtn:SetDisabledTexture(refreshBtn._prepareTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Up')
         refreshBtn:Enable()
         refreshBtn:SetAlpha(1)
+        setGuildLoadFailVisible(false)
       end
       if C_Timer and C_Timer.After then
         C_Timer.After(1.0, finishPrepare)
@@ -505,6 +525,7 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
       return
     end
 
+    setGuildLoadFailVisible(false)
     refreshBtn._isLoading = true
     refreshBtn:SetNormalTexture(refreshBtn._loadingTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Down')
     refreshBtn:SetPushedTexture(refreshBtn._loadingTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Down')
@@ -530,6 +551,7 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
               n
             )
           )
+          setGuildLoadFailVisible(true)
           return false
         end
       end
@@ -558,8 +580,11 @@ function RaceLocked_CreateFactionRaceGrid(parent, rightInset)
     -- No refresh timer: roster still loading or under min size skips save/UI/broadcast; user clicks again when ready.
     -- SendChatMessage to CHANNEL is protected — broadcast only runs here on the same stack as this click.
     local ok = refreshOwnStoredRowsAndRedraw()
-    if ok and RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports then
-      RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
+    if ok then
+      setGuildLoadFailVisible(false)
+      if RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports then
+        RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
+      end
     end
     finishRefreshButton()
   end)

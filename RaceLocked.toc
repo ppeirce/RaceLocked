@@ -4,6 +4,7 @@
 ## Author: BonniesDad
 ## Notes: Apply Race Locked event rules and share competative information
 ## SavedVariablesPerCharacter: RaceLockedDB
+## SavedVariables: RaceLockedAccountDB
 
 RaceLocked.lua
 

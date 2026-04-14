@@ -1,4 +1,4 @@
--- Persist last guild roster breakdown for the faction race grid in RaceLockedDB (per character).
+-- Persist last guild roster breakdown for the faction race grid in RaceLockedAccountDB (shared across characters).
 
 RaceLocked_GuildChampion = RaceLocked_GuildChampion or {}
 
@@ -20,13 +20,13 @@ local function copyGuildReportRow(e)
   }
 end
 
---- Ensure `RaceLockedDB.raceGridGuildSnapshot` exists (called from ADDON_LOADED and before save).
+--- Ensure `RaceLockedAccountDB.raceGridGuildSnapshot` exists (called from ADDON_LOADED and before save).
 function RaceLocked_GuildChampion_EnsureRaceGridGuildSnapshotDB()
-  RaceLockedDB = RaceLockedDB or {}
-  local s = RaceLockedDB.raceGridGuildSnapshot
+  RaceLockedAccountDB = RaceLockedAccountDB or {}
+  local s = RaceLockedAccountDB.raceGridGuildSnapshot
   if type(s) ~= 'table' then
     s = {}
-    RaceLockedDB.raceGridGuildSnapshot = s
+    RaceLockedAccountDB.raceGridGuildSnapshot = s
   end
   if type(s.byRace) ~= 'table' then
     s.byRace = {}
@@ -41,7 +41,7 @@ end
 --- @param raceTokens string[] e.g. four faction race API tokens in grid order
 function RaceLocked_GuildChampion_SaveRaceGridGuildSnapshotFromRoster(raceTokens)
   RaceLocked_GuildChampion_EnsureRaceGridGuildSnapshotDB()
-  local snap = RaceLockedDB.raceGridGuildSnapshot
+  local snap = RaceLockedAccountDB.raceGridGuildSnapshot
   snap.byRace = {}
   if not raceTokens or #raceTokens < 1 then
     snap.normalizedGuild = ''
@@ -73,10 +73,10 @@ end
 --- @param raceToken string
 --- @return table|nil
 function RaceLocked_GuildChampion_GetSnapshotGuildRowForRace(raceToken)
-  if not raceToken or raceToken == '' or not RaceLockedDB or type(RaceLockedDB.raceGridGuildSnapshot) ~= 'table' then
+  if not raceToken or raceToken == '' or not RaceLockedAccountDB or type(RaceLockedAccountDB.raceGridGuildSnapshot) ~= 'table' then
     return nil
   end
-  local snap = RaceLockedDB.raceGridGuildSnapshot
+  local snap = RaceLockedAccountDB.raceGridGuildSnapshot
   if not RaceLocked_GuildChampion_GetNormalizedPlayerGuildName then
     return nil
   end

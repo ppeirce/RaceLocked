@@ -39,6 +39,6 @@ function RaceLocked_InitializeMainPanel(settingsFrame, forceRefresh)
   end
   
   if RaceLocked_CreateFactionRaceGrid then
-    mount.raceRoot = select(1, RaceLocked_CreateFactionRaceGrid(mount, 0))
+    mount.raceRoot = select(1, RaceLocked_CreateFactionRaceGrid(mount))
   end
 end

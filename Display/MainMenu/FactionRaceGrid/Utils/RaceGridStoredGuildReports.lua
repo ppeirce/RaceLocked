@@ -104,22 +104,23 @@ local function buildStoredGuildReportsByRace(savedByRace)
 end
 
 local function ensureStoredGuildReportsDB()
-  RaceLockedDB = RaceLockedDB or {}
-  RaceLockedDB.raceGridStoredGuildReportsByRace =
-    buildStoredGuildReportsByRace(RaceLockedDB.raceGridStoredGuildReportsByRace)
-  G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE = RaceLockedDB.raceGridStoredGuildReportsByRace
+  RaceLockedAccountDB = RaceLockedAccountDB or {}
+  RaceLockedAccountDB.raceGridStoredGuildReportsByRace = buildStoredGuildReportsByRace(
+    RaceLockedAccountDB.raceGridStoredGuildReportsByRace
+  )
+  G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE = RaceLockedAccountDB.raceGridStoredGuildReportsByRace
 end
 
---- Ensure the race-grid stored rows are present and linked to RaceLockedDB.
+--- Ensure the race-grid stored rows are present and linked to RaceLockedAccountDB (all characters on this account).
 function RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
   ensureStoredGuildReportsDB()
 end
 
---- Persist current in-memory stored rows back to RaceLockedDB.
+--- Persist current in-memory stored rows back to RaceLockedAccountDB.
 --- Useful after mutating rows from incoming race-grid channel reports.
 function RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
   RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
-  RaceLockedDB.raceGridStoredGuildReportsByRace = G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE
+  RaceLockedAccountDB.raceGridStoredGuildReportsByRace = G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE
 end
 
 local function normalizeGuildName(name)

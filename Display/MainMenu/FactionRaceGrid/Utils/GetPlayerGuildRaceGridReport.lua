@@ -90,7 +90,6 @@ function RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
     total = GetNumGuildMembers()
   end
   total = tonumber(total) or 0
-print(total)
   if total < 100 then
     return nil
   end
@@ -144,17 +143,6 @@ print(total)
     averageLevel = n > 0 and (sumLevel / n) or nil,
     classes = classes,
   }
-end
-
---- Same as `RaceLocked_GetGuildRaceGridReportForRaceToken` but only when `raceToken` is the player's race (legacy callers).
---- @param raceToken string
---- @return table|nil
-function RaceLocked_GetPlayerGuildRaceGridReportForRaceToken(raceToken)
-  local _, playerRaceEn = UnitRace and UnitRace('player')
-  if not playerRaceEn or playerRaceEn == '' or not raceTokensMatch(playerRaceEn, raceToken) then
-    return nil
-  end
-  return RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
 end
 
 --- Total guild roster rows (online-first count, then full roster), for race grid gating.
