@@ -4,21 +4,27 @@
 --- @param classKey string e.g. warriors
 --- @return number r, number g, number b
 local function classColorForReportKey(G, classKey)
+  local brightness = tonumber(G.CLASS_COLOR_BRIGHTNESS) or 0.82
+  if brightness < 0 then
+    brightness = 0
+  elseif brightness > 1 then
+    brightness = 1
+  end
   local file = G.CLASS_KEY_TO_FILE[classKey]
   if not file then
-    return 0.85, 0.85, 0.8
+    return 0.85 * brightness, 0.85 * brightness, 0.8 * brightness
   end
   if RAID_CLASS_COLORS and RAID_CLASS_COLORS[file] then
     local c = RAID_CLASS_COLORS[file]
-    return c.r, c.g, c.b
+    return c.r * brightness, c.g * brightness, c.b * brightness
   end
   if GetClassColor then
     local r, g, b = GetClassColor(file)
     if type(r) == 'number' and type(g) == 'number' and type(b) == 'number' then
-      return r, g, b
+      return r * brightness, g * brightness, b * brightness
     end
   end
-  return 0.85, 0.85, 0.8
+  return 0.85 * brightness, 0.85 * brightness, 0.8 * brightness
 end
 
 --- @param G table

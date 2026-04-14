@@ -19,6 +19,8 @@ G.CLASS_BAR_PCT_GAP = 2
 -- Vertical lines between stacked class colours (drawn in OVERLAY on the bar row).
 G.CLASS_BAR_SEP_W = 1
 G.CLASS_BAR_SEP = { 0.22, 0.22, 0.24 }
+-- Multiplier applied to class colors so bars/labels are less vivid.
+G.CLASS_COLOR_BRIGHTNESS = 0.82
 G.CLASS_BAR_HOST_H = G.CLASS_BAR_HEIGHT
   + 2 * G.CLASS_BAR_BORDER_PAD
   + G.CLASS_BAR_PCT_GAP
