@@ -35,13 +35,17 @@ G.RACE_GRID_PANE_SECTION_GAP = 5
 G.STATS_ROW_H = 127 + 2 * G.CLASS_BAR_BORDER_PAD + 6 + 3 * G.RACE_GRID_PANE_SECTION_GAP
 G.ROW_GAP = 6
 G.GAP_AFTER_GRID = 11
+--- Reserve space for `UIPanelScrollFrameTemplate` scrollbar when sizing scroll content width.
+G.RACE_GRID_SCROLL_BAR_PAD = 28
+--- Nudge `ScrollBar` this many pixels left from the template’s default anchor (negative X).
+G.RACE_GRID_SCROLL_BAR_SHIFT_LEFT = 20
 G.REFRESH_ROW_H = 26
 G.EXPLAIN_TOP_GAP = 8
 G.FOOTER_TOP_GAP = 8
 G.INNER_PAD = 8
 
 G.EXPLAIN_TEXT =
-  'Race Locked will automatically remove you from groups that contain players from other races to your own.\n\nThe race averages compute the average level of each race in your faction.'
+  'Race Locked will automatically remove you from groups that contain players from other races to your own.\n\nThe race averages show each playable race (Alliance and Horde) using guild data stored for this account.'
 
 G.ACCENT_W = 3
 G.ACCENT_INSET_X = 3
@@ -86,7 +90,7 @@ G.CLASS_BAR_CHART_BACKDROP = {
   insets = { left = 2, right = 2, top = 2, bottom = 2 },
 }
 
--- Per-race accent (left bar); order matches panes 1–4 for that faction.
+-- Per-race accent (left bar); legacy 4-pane Alliance order (see `RACE_TOKEN_ACCENT` for the full grid).
 G.ALLIANCE_RACE_ACCENT = {
   { 0.78, 0.52, 0.28 }, -- Dwarf
   { 0.52, 0.35, 0.82 }, -- Night Elf
@@ -99,6 +103,33 @@ G.HORDE_RACE_ACCENT = {
   { 0.18, 0.58, 0.85 }, -- Troll
   { 0.68, 0.48, 0.32 }, -- Tauren
   { 0.42, 0.68, 0.52 }, -- Undead
+}
+
+--- All Classic playable races (both factions), for the combined race grid tab.
+G.RACE_GRID_ALL_TOKENS = { 'Human', 'Dwarf', 'NightElf', 'Gnome', 'Orc', 'Troll', 'Tauren', 'Scourge' }
+
+--- Left-bar tint per race token (for any grid order).
+G.RACE_TOKEN_ACCENT = {
+  Human = { 0.72, 0.62, 0.42 },
+  Dwarf = { 0.78, 0.52, 0.28 },
+  NightElf = { 0.52, 0.35, 0.82 },
+  Gnome = { 0.88, 0.45, 0.72 },
+  Orc = { 0.32, 0.72, 0.28 },
+  Troll = { 0.18, 0.58, 0.85 },
+  Tauren = { 0.68, 0.48, 0.32 },
+  Scourge = { 0.42, 0.68, 0.52 },
+}
+
+--- Title row label for each API race token.
+G.RACE_LABEL = {
+  Human = 'Human',
+  Dwarf = 'Dwarf',
+  NightElf = 'Night Elf',
+  Gnome = 'Gnome',
+  Orc = 'Orc',
+  Troll = 'Troll',
+  Tauren = 'Tauren',
+  Scourge = 'Undead',
 }
 
 -- Section copy for each race cell (guild names come from aggregated data).

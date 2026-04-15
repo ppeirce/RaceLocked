@@ -22,4 +22,4 @@ S.CLASS_BACKGROUND_ASPECT_RATIO = 1200 / 700
 
 -- Main settings window outer size (see CreateRootFrame).
 S.FRAME_WIDTH = 590
-S.FRAME_HEIGHT = 470
+S.FRAME_HEIGHT = 580

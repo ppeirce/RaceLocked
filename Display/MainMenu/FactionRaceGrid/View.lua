@@ -17,15 +17,13 @@ local function createChrome(root)
   guildLoadFailFs:SetWordWrap(true)
   guildLoadFailFs:SetWidth(420)
   guildLoadFailFs:SetTextColor(1, 0.42, 0.42)
-  guildLoadFailFs:SetText('Guild failed to load, try again')
+  guildLoadFailFs:SetText('Guild Roster not ready, try again')
   guildLoadFailFs:Hide()
   refreshRow._guildLoadFailFs = guildLoadFailFs
 
   local refreshTex = 'Interface\\Buttons\\UI-RefreshButton'
-  local prepareTex = 'Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up'
   local loadingTex = 'Interface\\Buttons\\UI-GroupLoot-Pass-Down'
   refreshBtn._refreshTex = refreshTex
-  refreshBtn._prepareTex = prepareTex
   refreshBtn._loadingTex = loadingTex
   refreshBtn:SetNormalTexture(refreshTex)
   refreshBtn:SetHighlightTexture('Interface\\Buttons\\ButtonHilight-Square', 'ADD')
@@ -36,16 +34,8 @@ local function createChrome(root)
       return
     end
     GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
-    if self._isLoading or self._isPreparing then
-      GameTooltip:AddLine('Prepare', 1, 0.92, 0.62)
-      GameTooltip:AddLine('Prepare Race Data', 1, 1, 1)
-    elseif self._isPrepared then  
-      GameTooltip:AddLine('Apply Update', 1, 0.92, 0.62)
-      GameTooltip:AddLine('Apply the newly collected data and publish to other players', 1, 1, 1)
-    else
-      GameTooltip:AddLine('Prepare', 1, 0.92, 0.62)
-      GameTooltip:AddLine('Prepare Race Data', 1, 1, 1)
-    end
+    GameTooltip:AddLine('Reload', 1, 0.92, 0.62)
+    GameTooltip:AddLine('Reload guild data and broadcast to other players', 1, 1, 1)
     GameTooltip:Show()
   end)
   refreshBtn:SetScript('OnLeave', function()
@@ -268,8 +258,9 @@ end
 
 --- Sort key: higher average first; ties keep stable order by race index.
 local function computeRaceGridSortOrder(raceTokens)
+  local n = type(raceTokens) == 'table' and #raceTokens or 0
   local rows = {}
-  for i = 1, 4 do
+  for i = 1, n do
     local token = raceTokens[i]
     local agg = RaceLocked_GuildChampion_GetAggregatedMockForRace and RaceLocked_GuildChampion_GetAggregatedMockForRace(token)
     local avg = agg and agg.averageLevel
@@ -284,19 +275,21 @@ local function computeRaceGridSortOrder(raceTokens)
   end)
   local order = {}
   local rankByIdx = {}
-  for slot = 1, 4 do
+  for slot = 1, n do
     order[slot] = rows[slot].idx
     rankByIdx[rows[slot].idx] = slot
   end
   return order, rankByIdx
 end
 
---- Lay out the faction race grid: 2×2 panes (sorted by average level) and refresh row.
+--- Lay out scrollable 2-column race grid (all races) and fixed refresh row on `root`.
 --- @param ctx table
 local function layoutGrid(ctx)
   local G = RaceLocked_GuildChampion
   local root = ctx.root
   local parent = ctx.parent
+  local scrollFrame = ctx.scrollFrame
+  local scrollChild = ctx.scrollChild
 
   local rw = root:GetWidth()
   if (not rw or rw < 2) and parent and parent.GetWidth then
@@ -306,7 +299,14 @@ local function layoutGrid(ctx)
     rw = 400
   end
 
-  local rowInner = rw - G.MID_GAP
+  local sw = scrollFrame and scrollFrame.GetWidth and scrollFrame:GetWidth() or rw
+  if not sw or sw < 40 then
+    sw = rw
+  end
+  local pad = tonumber(G.RACE_GRID_SCROLL_BAR_PAD) or 28
+  scrollChild:SetWidth(math.max(80, sw - pad))
+
+  local rowInner = scrollChild:GetWidth() - G.MID_GAP
   local wLeft = math.floor(rowInner / 2)
   local wRight = rowInner - wLeft
 
@@ -314,30 +314,39 @@ local function layoutGrid(ctx)
 
   local panes = ctx.panes
   local raceTokens = ctx.raceTokens
+  local numRaces = #raceTokens
+  if numRaces < 1 then
+    return
+  end
+  local numRows = math.max(1, math.ceil(numRaces / 2))
 
   local order, rankByIdx = computeRaceGridSortOrder(raceTokens)
   ctx.sortOrder = order
 
-  local o1, o2, o3, o4 = order[1], order[2], order[3], order[4]
+  for row = 1, numRows do
+    local li = (row - 1) * 2 + 1
+    local ri = (row - 1) * 2 + 2
+    local leftIdx = order[li]
+    local rightIdx = ri <= numRaces and order[ri] or nil
 
-  panes[o1]:ClearAllPoints()
-  panes[o1]:SetPoint('TOPLEFT', root, 'TOPLEFT', 0, -gridTop)
-  panes[o1]:SetSize(wLeft, G.STATS_ROW_H)
+    panes[leftIdx]:ClearAllPoints()
+    panes[leftIdx]:SetSize(wLeft, G.STATS_ROW_H)
+    if row == 1 then
+      panes[leftIdx]:SetPoint('TOPLEFT', scrollChild, 'TOPLEFT', 0, -gridTop)
+    else
+      local aboveLeft = order[(row - 2) * 2 + 1]
+      panes[leftIdx]:SetPoint('TOPLEFT', panes[aboveLeft], 'BOTTOMLEFT', 0, -G.ROW_GAP)
+    end
 
-  panes[o2]:ClearAllPoints()
-  panes[o2]:SetPoint('TOPLEFT', panes[o1], 'TOPRIGHT', G.MID_GAP, 0)
-  panes[o2]:SetSize(wRight, G.STATS_ROW_H)
-
-  panes[o3]:ClearAllPoints()
-  panes[o3]:SetPoint('TOPLEFT', panes[o1], 'BOTTOMLEFT', 0, -G.ROW_GAP)
-  panes[o3]:SetSize(wLeft, G.STATS_ROW_H)
-
-  panes[o4]:ClearAllPoints()
-  panes[o4]:SetPoint('TOPLEFT', panes[o3], 'TOPRIGHT', G.MID_GAP, 0)
-  panes[o4]:SetSize(wRight, G.STATS_ROW_H)
+    if rightIdx then
+      panes[rightIdx]:ClearAllPoints()
+      panes[rightIdx]:SetSize(wRight, G.STATS_ROW_H)
+      panes[rightIdx]:SetPoint('TOPLEFT', panes[leftIdx], 'TOPRIGHT', G.MID_GAP, 0)
+    end
+  end
 
   local icons = ctx.icons
-  for j = 1, 4 do
+  for j = 1, numRaces do
     local icon = icons[j]
     icon:ClearAllPoints()
     icon:SetSize(G.FACTION_ICON_SIZE, G.FACTION_ICON_SIZE)
@@ -346,7 +355,7 @@ local function layoutGrid(ctx)
   end
 
   local tx = textLeftOffset()
-  for i = 1, 4 do
+  for i = 1, numRaces do
     layoutRaceGridPane(panes[i], ctx.labels[i], ctx.details[i], tx, ctx.raceTokens[i])
     if panes[i]._rankFs then
       panes[i]._rankFs:SetText('#' .. tostring(rankByIdx[i]))
@@ -354,16 +363,16 @@ local function layoutGrid(ctx)
   end
 
   ctx.refreshRow:ClearAllPoints()
-  ctx.refreshRow:SetPoint('TOPLEFT', panes[o3], 'BOTTOMLEFT', 0, -G.GAP_AFTER_GRID)
-  ctx.refreshRow:SetPoint('TOPRIGHT', panes[o4], 'BOTTOMRIGHT', 0, -G.GAP_AFTER_GRID)
+  ctx.refreshRow:SetPoint('BOTTOMLEFT', root, 'BOTTOMLEFT', 0, G.OUTER_PAD_Y)
+  ctx.refreshRow:SetPoint('BOTTOMRIGHT', root, 'BOTTOMRIGHT', 0, G.OUTER_PAD_Y)
 
-  local newH = gridTop
-    + G.STATS_ROW_H * 2
-    + G.ROW_GAP
-    + G.GAP_AFTER_GRID
-    + G.REFRESH_ROW_H
+  local gridContentH = gridTop
+    + numRows * G.STATS_ROW_H
+    + math.max(0, numRows - 1) * G.ROW_GAP
     + G.OUTER_PAD_Y
-  root:SetHeight(newH)
+  scrollChild:SetHeight(gridContentH)
+
+  local newH = gridContentH + G.GAP_AFTER_GRID + G.REFRESH_ROW_H + 2 * G.OUTER_PAD_Y
   ctx.totalH = newH
 
   RaceLocked_GuildChampion_RefreshRaceGridDisplay(ctx.panes, ctx.raceTokens)
@@ -375,26 +384,49 @@ end
 function RaceLocked_CreateFactionRaceGrid(parent)
   local G = RaceLocked_GuildChampion
 
+  local raceTokens = G.RACE_GRID_ALL_TOKENS
+    or { 'Human', 'Dwarf', 'NightElf', 'Gnome', 'Orc', 'Troll', 'Tauren', 'Scourge' }
+  local numRaces = #raceTokens
+  local numRows = math.max(1, math.ceil(numRaces / 2))
   local totalH = G.OUTER_PAD_Y
     + G.GRID_TOP_OFFSET
-    + G.STATS_ROW_H * 2
-    + G.ROW_GAP
+    + numRows * G.STATS_ROW_H
+    + math.max(0, numRows - 1) * G.ROW_GAP
     + G.GAP_AFTER_GRID
     + G.REFRESH_ROW_H
-    + G.OUTER_PAD_Y
+    + 2 * G.OUTER_PAD_Y
 
   local root = CreateFrame('Frame', nil, parent)
-  root:SetPoint('TOPLEFT', parent, 'TOPLEFT', 0, 0)
-  root:SetPoint('TOPRIGHT', parent, 'TOPRIGHT', 0, 0)
-  root:SetHeight(totalH)
+  root:SetAllPoints(parent)
+
+  local scrollFrame = CreateFrame('ScrollFrame', nil, root, 'UIPanelScrollFrameTemplate')
+  local scrollChild = CreateFrame('Frame', nil, scrollFrame)
+  scrollFrame:SetScrollChild(scrollChild)
 
   local refreshRow, refreshBtn = createChrome(root)
+  refreshRow:SetPoint('BOTTOMLEFT', root, 'BOTTOMLEFT', 0, G.OUTER_PAD_Y)
+  refreshRow:SetPoint('BOTTOMRIGHT', root, 'BOTTOMRIGHT', 0, G.OUTER_PAD_Y)
+  refreshRow:SetFrameLevel((scrollFrame:GetFrameLevel() or 0) + 10)
 
-  local playerFaction = UnitFactionGroup and UnitFactionGroup('player') or 'Alliance'
-  local isHorde = playerFaction == 'Horde'
-  local raceAccents = isHorde and G.HORDE_RACE_ACCENT or G.ALLIANCE_RACE_ACCENT
-  local raceTokens = isHorde and { 'Orc', 'Troll', 'Tauren', 'Scourge' }
-    or { 'Dwarf', 'NightElf', 'Human', 'Gnome' }
+  scrollFrame:SetPoint('TOPLEFT', root, 'TOPLEFT', 0, -G.OUTER_PAD_Y)
+  scrollFrame:SetPoint('BOTTOMLEFT', refreshRow, 'TOPLEFT', 0, 6)
+  scrollFrame:SetPoint('BOTTOMRIGHT', refreshRow, 'TOPRIGHT', 0, 6)
+
+  do
+    local sb = scrollFrame.ScrollBar
+    local shift = tonumber(G.RACE_GRID_SCROLL_BAR_SHIFT_LEFT) or 20
+    if sb and sb.GetPoint and shift ~= 0 then
+      local p1, rel1, rp1, x1, y1 = sb:GetPoint(1)
+      local p2, rel2, rp2, x2, y2 = sb:GetPoint(2)
+      sb:ClearAllPoints()
+      if p1 and rel1 and rp1 then
+        sb:SetPoint(p1, rel1, rp1, (tonumber(x1) or 0) - shift, tonumber(y1) or 0)
+      end
+      if p2 and rel2 and rp2 then
+        sb:SetPoint(p2, rel2, rp2, (tonumber(x2) or 0) - shift, tonumber(y2) or 0)
+      end
+    end
+  end
 
   local playerRaceToken = ''
   if UnitRace then
@@ -409,29 +441,22 @@ function RaceLocked_CreateFactionRaceGrid(parent)
   local details = {}
   local icons = {}
 
-  for i = 1, 4 do
-    local f, icon, lbl, det = createRaceStatPane(root, raceTokens[i], raceAccents[i])
+  for i = 1, numRaces do
+    local token = raceTokens[i]
+    local accent = (G.RACE_TOKEN_ACCENT and G.RACE_TOKEN_ACCENT[token]) or { 0.55, 0.55, 0.55 }
+    local f, icon, lbl, det = createRaceStatPane(scrollChild, token, accent)
     panes[i] = f
     labels[i] = lbl
     details[i] = det
     icons[i] = icon
-  end
-
-  if isHorde then
-    labels[1]:SetText('Orc')
-    labels[2]:SetText('Troll')
-    labels[3]:SetText('Tauren')
-    labels[4]:SetText('Undead')
-  else
-    labels[1]:SetText('Dwarf')
-    labels[2]:SetText('Night Elf')
-    labels[3]:SetText('Human')
-    labels[4]:SetText('Gnome')
+    lbl:SetText((G.RACE_LABEL and G.RACE_LABEL[token]) or token)
   end
 
   local layoutCtx = {
     root = root,
     parent = parent,
+    scrollFrame = scrollFrame,
+    scrollChild = scrollChild,
     refreshRow = refreshRow,
     panes = panes,
     labels = labels,
@@ -448,15 +473,17 @@ function RaceLocked_CreateFactionRaceGrid(parent)
   RaceLocked_GuildChampion_RequestRaceGridRerender = runLayout
 
   refreshBtn:SetScript('OnClick', function()
-    if refreshBtn._isLoading or refreshBtn._isPreparing then
+    if refreshBtn._isLoading then
       return
     end
 
+    local ROSTER_FAIL_MSG = 'Guild Roster not ready, try again'
     local function setGuildLoadFailVisible(show)
       local fs = refreshRow._guildLoadFailFs
       if not fs then
         return
       end
+      fs:SetText(ROSTER_FAIL_MSG)
       if show then
         fs:Show()
       else
@@ -482,49 +509,6 @@ function RaceLocked_CreateFactionRaceGrid(parent)
       return n
     end
 
-    if not refreshBtn._isPrepared then
-      if inGuild then
-        local n = readGuildRosterMemberCountForGate()
-        local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
-        if n < minN then
-          print(
-            string.format(
-              '|cffffffffRace Locked|r: Your guild needs at least %d guild members (current: %d) to show here.',
-              minN,
-              n
-            )
-          )
-          refreshBtn._isPrepared = false
-          setGuildLoadFailVisible(true)
-          return
-        end
-      end
-      setGuildLoadFailVisible(false)
-      refreshBtn._isPreparing = true
-      refreshBtn:SetNormalTexture(refreshBtn._loadingTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Down')
-      refreshBtn:SetPushedTexture(refreshBtn._loadingTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Down')
-      refreshBtn:SetDisabledTexture(refreshBtn._loadingTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Down')
-      refreshBtn:Disable()
-      refreshBtn:SetAlpha(0.75)
-      RaceLocked_RefreshGuildRoster()
-      local function finishPrepare()
-        refreshBtn._isPreparing = false
-        refreshBtn._isPrepared = true
-        refreshBtn:SetNormalTexture(refreshBtn._prepareTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Up')
-        refreshBtn:SetPushedTexture(refreshBtn._prepareTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Up')
-        refreshBtn:SetDisabledTexture(refreshBtn._prepareTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Up')
-        refreshBtn:Enable()
-        refreshBtn:SetAlpha(1)
-        setGuildLoadFailVisible(false)
-      end
-      if C_Timer and C_Timer.After then
-        C_Timer.After(1.0, finishPrepare)
-      else
-        finishPrepare()
-      end
-      return
-    end
-
     setGuildLoadFailVisible(false)
     refreshBtn._isLoading = true
     refreshBtn:SetNormalTexture(refreshBtn._loadingTex or 'Interface\\Buttons\\UI-GroupLoot-Pass-Down')
@@ -534,19 +518,23 @@ function RaceLocked_CreateFactionRaceGrid(parent)
     refreshBtn:SetAlpha(0.75)
 
     local rosterRequested = false
+    if inGuild and GuildRoster then
+      GuildRoster()
+      rosterRequested = true
+    end
 
     local function refreshOwnStoredRowsAndRedraw()
       if inGuild then
         local n = readGuildRosterMemberCountForGate()
         local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
         if rosterRequested and n < 1 then
-          print('|cffffffffRace Locked|r: Roster is not yet loaded, please try again.')
+          setGuildLoadFailVisible(true)
           return false
         end
         if n < minN then
           print(
             string.format(
-              '|cffffffffRace Locked|r: Your guild needs at least %d guild members (current: %d) to show here.',
+              '|cffffffffRace Locked|r: Guild roster size check failed (need %d, have %d).',
               minN,
               n
             )
@@ -554,6 +542,13 @@ function RaceLocked_CreateFactionRaceGrid(parent)
           setGuildLoadFailVisible(true)
           return false
         end
+        print(
+          string.format(
+            '|cffffffffRace Locked|r: Guild roster size check passed (need %d, have %d).',
+            minN,
+            n
+          )
+        )
       end
       if RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster then
         RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens)
@@ -569,15 +564,9 @@ function RaceLocked_CreateFactionRaceGrid(parent)
       refreshBtn:Enable()
       refreshBtn:SetAlpha(1)
       refreshBtn._isLoading = false
-      refreshBtn._isPrepared = false
     end
 
-    if inGuild and GuildRoster then
-      GuildRoster()
-      rosterRequested = true
-    end
-
-    -- No refresh timer: roster still loading or under min size skips save/UI/broadcast; user clicks again when ready.
+    -- Roster may still be loading after GuildRoster(); user can click again. Under min size: no broadcast.
     -- SendChatMessage to CHANNEL is protected — broadcast only runs here on the same stack as this click.
     local ok = refreshOwnStoredRowsAndRedraw()
     if ok then

@@ -166,8 +166,12 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
   if not panes[1] or not panes[1]._guildSectionTitle or not panes[1]._classBarHost then
     return
   end
-  for i = 1, 4 do
+  local n = type(raceTokens) == 'table' and #raceTokens or 0
+  for i = 1, n do
     local pane = panes[i]
+    if not pane then
+      break
+    end
     local token = raceTokens[i]
     local agg = RaceLocked_GuildChampion_GetAggregatedMockForRace and RaceLocked_GuildChampion_GetAggregatedMockForRace(token)
     local subR, subG, subB = G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85

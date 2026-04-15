@@ -25,6 +25,8 @@ local function guildRow(guildName)
     guildSize = 0,
     averageLevel = 0,
     classes = zeroClasses(),
+    --- Unix time (GetServerTime): last broadcast stamp from a member of this guild, or last applied incoming stamp.
+    timestamp = 0,
   }
 end
 
@@ -76,16 +78,22 @@ local function coerceGuildRow(row, defaultRow)
   local guildSize = tonumber(src.guildSize) or 0
   local averageLevel = tonumber(src.averageLevel) or 0
   local classes = copyClasses(src.classes)
+  local timestamp = tonumber(src.timestamp) or 0
   if guildSize > 0 and guildSize < minGuildMembersForStore() then
     guildSize = 0
     averageLevel = 0
     classes = zeroClasses()
+    timestamp = 0
+  end
+  if guildSize == 0 then
+    timestamp = 0
   end
   return {
     guildName = defaultRow.guildName,
     guildSize = guildSize,
     averageLevel = averageLevel,
     classes = classes,
+    timestamp = timestamp,
   }
 end
 
@@ -145,6 +153,7 @@ local function applyRowReport(targetRow, report)
   targetRow.guildSize = guildSize
   targetRow.averageLevel = tonumber(report and report.averageLevel) or 0
   targetRow.classes = copyClasses(report and report.classes)
+  -- Roster refresh does not imply a broadcast stamp; timestamp is owned by comms apply / own broadcast.
   return true
 end
 
