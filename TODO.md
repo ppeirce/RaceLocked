@@ -19,3 +19,7 @@ How can we make this reliable?
 
 Again, how can we reliably keep this number up to date?
 
+## EU Compatability
+
+Soulseeker - Night Elf, <Children of Elune>
+
