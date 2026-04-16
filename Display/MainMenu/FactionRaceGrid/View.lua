@@ -534,23 +534,23 @@ function RaceLocked_CreateFactionRaceGrid(parent)
           return false
         end
         if n < minN then
-          print(
-            string.format(
-              '|cffffffffRace Locked|r: Guild roster size check failed (need %d, have %d).',
-              minN,
-              n
-            )
-          )
+          -- print(
+          --   string.format(
+          --     '|cffffffffRace Locked|r: Guild roster size check failed (need %d, have %d).',
+          --     minN,
+          --     n
+          --   )
+          -- )
           setGuildLoadFailVisible(true)
           return false
         end
-        print(
-          string.format(
-            '|cffffffffRace Locked|r: Guild roster size check passed (need %d, have %d).',
-            minN,
-            n
-          )
-        )
+        -- print(
+        --   string.format(
+        --     '|cffffffffRace Locked|r: Guild roster size check passed (need %d, have %d).',
+        --     minN,
+        --     n
+        --   )
+        -- )
       end
       if RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster then
         RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens)
