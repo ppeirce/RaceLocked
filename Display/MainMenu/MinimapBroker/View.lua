@@ -4,7 +4,7 @@ function RaceLocked_Settings_RegisterDataBroker()
   local addonLDB = LibStub('LibDataBroker-1.1'):NewDataObject('RaceLocked', {
     type = 'data source',
     text = 'Race Locked',
-    icon = S.TEXTURE_PATH .. '\\bonnie-round.png',
+    icon = S.TEXTURE_PATH .. '\\icon_racelock.jpg',
     OnClick = function(_, btn)
       if btn == 'LeftButton' then
         ToggleRaceLockedSettings()
