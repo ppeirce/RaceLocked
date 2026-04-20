@@ -520,15 +520,17 @@ function RaceLocked_CreateFactionRaceGrid(parent)
     refreshBtn:SetAlpha(0.75)
 
     local rosterRequested = false
-    if inGuild and GuildRoster then
-      GuildRoster()
-      rosterRequested = true
-    end
+    RaceLocked_RefreshGuildRoster()
+    rosterRequested = true
 
     local function refreshOwnStoredRowsAndRedraw()
       if inGuild then
         local n = readGuildRosterMemberCountForGate()
-        local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
+        local minN = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID
+        if RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid and GetGuildInfo then
+          minN = RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(GetGuildInfo('player'))
+        end
+        minN = tonumber(minN) or 500
         if rosterRequested and n < 1 then
           setGuildLoadFailVisible(true)
           return false
@@ -552,8 +554,13 @@ function RaceLocked_CreateFactionRaceGrid(parent)
         --   )
         -- )
       end
+      local updatedOwnRows = false
       if RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster then
-        RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens)
+        updatedOwnRows = RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens) and true or false
+      end
+      if inGuild and not updatedOwnRows then
+        setGuildLoadFailVisible(true)
+        return false
       end
       runLayout()
       return true

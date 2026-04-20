@@ -268,12 +268,10 @@ local function applyGuildRosterSyncFromButton()
     syncBtn:SetAlpha(0.75)
   end
 
-  local inGuild = IsInGuild and IsInGuild()
   local rosterRequested = false
-  if inGuild and GuildRoster then
-    GuildRoster()
-    rosterRequested = true
-  end
+  RaceLocked_RefreshGuildRoster()
+  rosterRequested = true
+
   local function finishRefresh()
     if rosterRequested then
       local rosterCount = 0

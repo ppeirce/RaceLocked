@@ -90,7 +90,12 @@ function RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
     total = GetNumGuildMembers()
   end
   total = tonumber(total) or 0
-  if total < 100 then
+  local minN = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID
+  if RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid then
+    minN = RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(guildName)
+  end
+  minN = tonumber(minN) or 500
+  if total < minN then
     return nil
   end
 
@@ -167,6 +172,10 @@ function RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid()
   if not IsInGuild or not IsInGuild() then
     return true
   end
-  local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
+  local minN = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID
+  if RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid and GetGuildInfo then
+    minN = RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(GetGuildInfo('player'))
+  end
+  minN = tonumber(minN) or 500
   return RaceLocked_GuildChampion_GetGuildRosterMemberCount() >= minN
 end

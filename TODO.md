@@ -21,5 +21,12 @@ Again, how can we reliably keep this number up to date?
 
 ## EU Compatability
 
-Soulseeker - Night Elf, <Children of Elune>
+Soulseeker - Night Elf
+
+
+
+### Single target re-sync
+
+Select one person from the RaceLockedDataBus channel, and target them for a resync.   
+Reduces traffic on the addon messaging channel.
 

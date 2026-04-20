@@ -8,7 +8,11 @@ function Comms.ApplyIncomingReport(report)
   if not report then
     return false
   end
-  local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
+  local minN = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID
+  if RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid then
+    minN = RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(report.guildName)
+  end
+  minN = tonumber(minN) or 500
   if (tonumber(report.guildSize) or 0) < minN then
     return false
   end

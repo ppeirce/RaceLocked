@@ -161,6 +161,70 @@ local function mutedBarTexture(tex)
   tex:SetColorTexture(0.22, 0.22, 0.24, 1)
 end
 
+--- @param ts number|nil Unix timestamp
+--- @return string
+local function formatGuildLastUpdate(ts)
+  local n = tonumber(ts) or 0
+  if n <= 0 then
+    return 'Never'
+  end
+  if date then
+    local s = date('%Y-%m-%d %H:%M:%S', n)
+    if s and s ~= '' then
+      return s
+    end
+  end
+  return tostring(math.floor(n))
+end
+
+--- @param pane Frame
+--- @param raceToken string
+local function ensureGuildNamesTooltip(pane, raceToken)
+  if not pane or not pane._guildNames then
+    return
+  end
+  if not pane._guildNamesHit then
+    local hit = CreateFrame('Frame', nil, pane)
+    local paneLevel = (pane.GetFrameLevel and pane:GetFrameLevel()) or 0
+    hit:SetFrameLevel(paneLevel + 5)
+    hit:EnableMouse(true)
+    hit:Hide()
+    hit:SetScript('OnLeave', function()
+      if GameTooltip then
+        GameTooltip:Hide()
+      end
+    end)
+    hit:SetScript('OnEnter', function(self)
+      if not GameTooltip then
+        return
+      end
+      local token = self._rlRaceToken
+      local rows = RaceLocked_GuildChampion.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE
+        and RaceLocked_GuildChampion.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE[token]
+      if type(rows) ~= 'table' or #rows < 1 then
+        return
+      end
+      GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
+      GameTooltip:ClearLines()
+      GameTooltip:AddLine('Guild Last Update', 1, 0.92, 0.62)
+      for _, row in ipairs(rows) do
+        local guildName = type(row.guildName) == 'string' and row.guildName or ''
+        if guildName ~= '' then
+          local stamp = formatGuildLastUpdate(row.timestamp)
+          GameTooltip:AddDoubleLine(guildName .. ' (' .. row.guildSize .. ')', stamp, 1, 1, 1, 0.9, 0.9, 0.9)
+        end
+      end
+      GameTooltip:Show()
+    end)
+    pane._guildNamesHit = hit
+  end
+  local hit = pane._guildNamesHit
+  hit._rlRaceToken = raceToken
+  hit:ClearAllPoints()
+  hit:SetPoint('TOPLEFT', pane._guildNames, 'TOPLEFT', 0, 0)
+  hit:SetPoint('BOTTOMRIGHT', pane._guildNames, 'BOTTOMRIGHT', 0, 0)
+end
+
 function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
   local G = RaceLocked_GuildChampion
   if not panes[1] or not panes[1]._guildSectionTitle or not panes[1]._classBarHost then
@@ -181,9 +245,14 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
     if agg and agg.guildNamesText and agg.guildNamesText ~= '' then
       pane._guildNames:SetText(agg.guildNamesText)
       pane._guildNames:SetTextColor(0.88, 0.86, 0.8)
+      ensureGuildNamesTooltip(pane, token)
+      pane._guildNamesHit:Show()
     else
       pane._guildNames:SetText('—')
       pane._guildNames:SetTextColor(G.MUTED[1], G.MUTED[2], G.MUTED[3])
+      if pane._guildNamesHit then
+        pane._guildNamesHit:Hide()
+      end
     end
 
     pane._avgSubtitle:SetText(G.RACE_GRID_AVG_SUBTITLE)

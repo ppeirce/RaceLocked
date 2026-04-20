@@ -9,11 +9,12 @@ function RaceLocked_Settings_UpdateFrameBackdrop(settingsFrame)
   local frameHeight = settingsFrame:GetHeight()
   bg:SetSize(frameHeight * S.CLASS_BACKGROUND_ASPECT_RATIO, frameHeight)
   settingsFrame:SetBackdrop({
-    bgFile = nil,
-    edgeFile = 'Interface\\Buttons\\WHITE8x8',
+    bgFile = 'Interface\\Buttons\\WHITE8x8',
+    edgeFile = 'Interface\\Tooltips\\UI-Tooltip-Border',
     tile = false,
-    edgeSize = 2,
-    insets = { left = 0, right = 0, top = 0, bottom = 0 },
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
   })
-  settingsFrame:SetBackdropBorderColor(0, 0, 0, 1)
+  settingsFrame:SetBackdropColor(0.03, 0.03, 0.03, 0.5)
+  settingsFrame:SetBackdropBorderColor(0.35, 0.35, 0.35, 0.9)
 end

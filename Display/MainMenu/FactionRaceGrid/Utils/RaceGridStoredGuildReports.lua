@@ -37,26 +37,27 @@ local DEFAULT_RACE_GRID_STORED_GUILD_REPORTS_BY_RACE = {
     guildRow('Honorcore'),
   },
   NightElf = {
-    guildRow('ELFCORE'),
+    guildRow('Elfcore'),
+    guildRow('Nelfcore'),
   },
   Dwarf = {
-    guildRow('STONECORE'),
-    guildRow('ROCKCORE'),
+    guildRow('Stonecore'),
+    guildRow('Rockcore'),
   },
   Gnome = {
-    guildRow('FOR GNOMEREGAN'),
+    guildRow('For Gnomeregan'),
   },
   Orc = {
-    guildRow('ZUGCORE'),
+    guildRow('Zugcore'),
   },
   Troll = {
     guildRow('Hardingo'),
   },
   Tauren = {
-    guildRow('HERDCORE'),
+    guildRow('Herdcore'),
   },
   Scourge = {
-    guildRow('DEADCORE'),
+    guildRow('Deadcore'),
   },
 }
 
@@ -70,7 +71,15 @@ local function copyClasses(classes)
 end
 
 local function minGuildMembersForStore()
-  return tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 100
+  local guildName = nil
+  if type(GetGuildInfo) == 'function' then
+    guildName = GetGuildInfo('player')
+  end
+  local minN = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID
+  if RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid then
+    minN = RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(guildName)
+  end
+  return tonumber(minN) or 500
 end
 
 local function coerceGuildRow(row, defaultRow)
