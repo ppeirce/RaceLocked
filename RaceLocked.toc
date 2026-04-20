@@ -59,3 +59,5 @@ Display/MainMenu/MinimapBroker/Utils/EnsureMinimapSavedVars.lua
 Display/MainMenu/MinimapBroker/View.lua
 
 Display/MainMenu/RaceLockedOptions/Index.lua
+
+Functions/SlashCommand/Index.lua
