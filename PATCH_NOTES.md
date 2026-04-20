@@ -1,5 +1,17 @@
 ### PATCH NOTES
 
+**1.0.4 (21-04-2026)**
+
+### Features
+
+- Cross faction race data
+- Share data of all races on reload
+
+### Developer improvements
+
+- Use timestamp to make sure stale data isn't stored
+- Do not send broadcast to other players when guild roster not loaded
+
 **1.0.3 (14-04-2026)**
 
 ### Features
