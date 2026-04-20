@@ -17,6 +17,7 @@ Libs/LibDBIcon-1.0/LibDBIcon-1.0.lua
 Functions/EnforceSameRaceInParty/EnforceSameRaceInParty.lua
 Functions/EnforceRaceLanguage/EnforceRaceLanguage.lua
 Functions/Comms/Utils/WireCodec.lua
+Functions/Comms/Utils/RaceGridStoredUnixTime.lua
 Functions/Comms/ChannelConnection/Index.lua
 Functions/Comms/Utils/ApplyIncomingReport.lua
 Functions/Comms/Index.lua
@@ -30,6 +31,7 @@ Display/MainMenu/FactionRaceGrid/Utils/GetPlayerGuildRaceGridReport.lua
 Display/MainMenu/FactionRaceGrid/Utils/RaceGridGuildSnapshot.lua
 Display/MainMenu/FactionRaceGrid/Utils/AggregateRaceGuildReports.lua
 Display/MainMenu/FactionRaceGrid/Utils/RaceIconTexture.lua
+Display/MainMenu/FactionRaceGrid/Utils/FormatEasternTime.lua
 Display/MainMenu/FactionRaceGrid/Utils/Guild.lua
 Display/MainMenu/FactionRaceGrid/View.lua
 Display/MainMenu/InitializeMainPanel.lua

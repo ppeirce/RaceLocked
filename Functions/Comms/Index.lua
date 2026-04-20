@@ -19,7 +19,7 @@ function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
   end
   local canStampOwnGuild = ownGuildNorm ~= ''
     and (not RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid or RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid())
-  local now = (GetServerTime and GetServerTime()) or time()
+  local now = RaceLocked_GuildChampion_GetRaceGridStoredUnixTime()
   local stampedOwn = false
 
   for raceToken, rows in pairs(G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE or {}) do

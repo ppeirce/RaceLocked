@@ -161,15 +161,15 @@ local function mutedBarTexture(tex)
   tex:SetColorTexture(0.22, 0.22, 0.24, 1)
 end
 
---- @param ts number|nil Unix timestamp
+--- @param ts number|nil Unix timestamp (stored as realm/server time when available)
 --- @return string
 local function formatGuildLastUpdate(ts)
   local n = tonumber(ts) or 0
   if n <= 0 then
     return 'Never'
   end
-  if date then
-    local s = date('%Y-%m-%d %H:%M:%S', n)
+  if RaceLocked_GuildChampion_FormatUnixAsEastern then
+    local s = RaceLocked_GuildChampion_FormatUnixAsEastern(n)
     if s and s ~= '' then
       return s
     end
@@ -206,7 +206,7 @@ local function ensureGuildNamesTooltip(pane, raceToken)
       end
       GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
       GameTooltip:ClearLines()
-      GameTooltip:AddLine('Guild Last Update', 1, 0.92, 0.62)
+      GameTooltip:AddLine('Guild Last Update (US Eastern)', 1, 0.92, 0.62)
       for _, row in ipairs(rows) do
         local guildName = type(row.guildName) == 'string' and row.guildName or ''
         if guildName ~= '' then

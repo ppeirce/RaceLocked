@@ -25,7 +25,8 @@ local function guildRow(guildName)
     guildSize = 0,
     averageLevel = 0,
     classes = zeroClasses(),
-    --- Unix time (GetServerTime): last broadcast stamp from a member of this guild, or last applied incoming stamp.
+    --- Unix time: last broadcast stamp (realm server clock via GetRaceGridStoredUnixTime when possible),
+    --- or last applied incoming stamp. UI shows US Eastern (EST/EDT) for the same instant for everyone.
     timestamp = 0,
   }
 end
