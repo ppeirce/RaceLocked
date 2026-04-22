@@ -23,6 +23,8 @@ local function guildRow(guildName)
   return {
     guildName = guildName,
     guildSize = 0,
+    guildDeaths = 0,
+    guildAchievementsAverage = 0,
     averageLevel = 0,
     classes = zeroClasses(),
     --- Unix time: last broadcast stamp (realm server clock via GetRaceGridStoredUnixTime when possible),
@@ -101,6 +103,14 @@ local function coerceGuildRow(row, defaultRow)
   local averageLevel = tonumber(src.averageLevel) or 0
   local classes = copyClasses(src.classes)
   local timestamp = tonumber(src.timestamp) or 0
+  local guildDeaths = tonumber(src.guildDeaths)
+  if guildDeaths == nil then
+    guildDeaths = tonumber(defaultRow.guildDeaths) or 0
+  end
+  local guildAchievementsAverage = tonumber(src.guildAchievementsAverage)
+  if guildAchievementsAverage == nil then
+    guildAchievementsAverage = tonumber(defaultRow.guildAchievementsAverage) or 0
+  end
   if guildSize > 0 and guildSize < minGuildMembersForStore() then
     guildSize = 0
     averageLevel = 0
@@ -113,6 +123,8 @@ local function coerceGuildRow(row, defaultRow)
   return {
     guildName = defaultRow.guildName,
     guildSize = guildSize,
+    guildDeaths = guildDeaths,
+    guildAchievementsAverage = guildAchievementsAverage,
     averageLevel = averageLevel,
     classes = classes,
     timestamp = timestamp,
@@ -216,6 +228,90 @@ function RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceToke
     RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
   end
   return changed
+end
+
+--- Increment `guildDeaths` on stored rows for the current player's race column that match their guild.
+--- @return boolean true when any row was updated
+function RaceLocked_GuildChampion_IncrementGuildDeathsForOwnGuild()
+  RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
+  if not RaceLocked_GuildChampion_GetNormalizedPlayerGuildName then
+    return false
+  end
+  local ownGuildNorm = RaceLocked_GuildChampion_GetNormalizedPlayerGuildName() or ''
+  if ownGuildNorm == '' then
+    return false
+  end
+  local playerRaceToken = ''
+  if UnitRace then
+    local _, token = UnitRace('player')
+    playerRaceToken = type(token) == 'string' and token or ''
+  end
+  if playerRaceToken == '' then
+    return false
+  end
+  local rows = G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE and G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE[playerRaceToken]
+  if type(rows) ~= 'table' then
+    return false
+  end
+  local changed = false
+  for _, row in ipairs(rows) do
+    if type(row) == 'table' and normalizeGuildName(row.guildName) == ownGuildNorm then
+      row.guildDeaths = (tonumber(row.guildDeaths) or 0) + 1
+      changed = true
+    end
+  end
+  if changed then
+    RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
+    if RaceLocked_GuildChampion_RequestRaceGridRerender then
+      RaceLocked_GuildChampion_RequestRaceGridRerender()
+    end
+  end
+  return changed
+end
+
+--- Sum `guildDeaths` across all guild slots stored for one race (for UI).
+--- @param raceToken string
+--- @return number
+function RaceLocked_GuildChampion_GetTotalGuildDeathsForRace(raceToken)
+  RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
+  local rows = G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE and G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE[raceToken]
+  if type(rows) ~= 'table' then
+    return 0
+  end
+  local sum = 0
+  for _, row in ipairs(rows) do
+    if type(row) == 'table' then
+      sum = sum + (tonumber(row.guildDeaths) or 0)
+    end
+  end
+  return sum
+end
+
+--- Member-weighted average of `guildAchievementsAverage` for stored guild rows of one race (for UI).
+--- @param raceToken string
+--- @return number 0 when no roster-sized rows
+function RaceLocked_GuildChampion_GetWeightedGuildAchievementsAverageForRace(raceToken)
+  RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
+  local rows = G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE and G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE[raceToken]
+  if type(rows) ~= 'table' then
+    return 0
+  end
+  local totalMembers = 0
+  local weighted = 0
+  for _, row in ipairs(rows) do
+    if type(row) == 'table' then
+      local sz = tonumber(row.guildSize) or 0
+      if sz > 0 then
+        local ach = tonumber(row.guildAchievementsAverage) or 0
+        totalMembers = totalMembers + sz
+        weighted = weighted + ach * sz
+      end
+    end
+  end
+  if totalMembers <= 0 then
+    return 0
+  end
+  return weighted / totalMembers
 end
 
 ensureStoredGuildReportsDB()

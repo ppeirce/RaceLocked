@@ -67,8 +67,16 @@ function Comms.ApplyIncomingReport(report)
         row.averageLevel = report.averageLevel
         row.classes = report.classes or Comms.EmptyClasses()
         row.timestamp = incomingTs
+        local incomingDeaths = tonumber(report.guildDeaths) or 0
+        local storedDeaths = tonumber(row.guildDeaths) or 0
+        if incomingDeaths > storedDeaths then
+          row.guildDeaths = incomingDeaths
+        end
         if RaceLocked_GuildChampion_PersistStoredGuildReportsByRace then
           RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
+        end
+        if RaceLocked_GuildChampion_RequestRaceGridRerender then
+          RaceLocked_GuildChampion_RequestRaceGridRerender()
         end
         return true
       end

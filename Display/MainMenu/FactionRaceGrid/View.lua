@@ -49,6 +49,20 @@ local function createChrome(root)
   return refreshRow, refreshBtn
 end
 
+--- @param n number|nil
+--- @return string
+local function formatRaceGridStatDisplay(n)
+  local v = tonumber(n)
+  if v == nil then
+    return '-'
+  end
+  local rounded = math.floor(v + 0.5)
+  if rounded == 0 then
+    return '-'
+  end
+  return tostring(rounded)
+end
+
 --- @param root Frame
 --- @param raceToken string API race token for icon path
 --- @param raceAccent number[] rgb accent bar
@@ -92,7 +106,7 @@ local function createRaceStatPane(root, raceToken, raceAccent)
   f._skullCountFs = f:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
   f._skullCountFs:SetJustifyH('RIGHT')
   f._skullCountFs:SetTextColor(G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85)
-  f._skullCountFs:SetText('0')
+  f._skullCountFs:SetText('-')
 
   f._skullIcon = f:CreateTexture(nil, 'OVERLAY')
   f._skullIcon:SetTexture('Interface\\AddOns\\RaceLocked\\Textures\\skull.png')
@@ -118,7 +132,7 @@ local function createRaceStatPane(root, raceToken, raceAccent)
   f._achievementPointsFs = f:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
   f._achievementPointsFs:SetJustifyH('RIGHT')
   f._achievementPointsFs:SetTextColor(G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85)
-  f._achievementPointsFs:SetText('0')
+  f._achievementPointsFs:SetText('-')
 
   f._achievementIcon = f:CreateTexture(nil, 'OVERLAY')
   f._achievementIcon:SetTexture('Interface\\AddOns\\RaceLocked\\Textures\\HardcoreAchievementsButton.png')
@@ -442,10 +456,18 @@ local function layoutGrid(ctx)
     layoutRaceGridPane(panes[i], ctx.labels[i], ctx.details[i], tx, ctx.raceTokens[i])
     ctx.labels[i]:SetText('')
     if panes[i]._skullCountFs then
-      panes[i]._skullCountFs:SetText('0')
+      local deaths = 0
+      if RaceLocked_GuildChampion_GetTotalGuildDeathsForRace then
+        deaths = RaceLocked_GuildChampion_GetTotalGuildDeathsForRace(ctx.raceTokens[i]) or 0
+      end
+      panes[i]._skullCountFs:SetText(formatRaceGridStatDisplay(deaths))
     end
     if panes[i]._achievementPointsFs then
-      panes[i]._achievementPointsFs:SetText('0')
+      local ach = 0
+      if RaceLocked_GuildChampion_GetWeightedGuildAchievementsAverageForRace then
+        ach = RaceLocked_GuildChampion_GetWeightedGuildAchievementsAverageForRace(ctx.raceTokens[i]) or 0
+      end
+      panes[i]._achievementPointsFs:SetText(formatRaceGridStatDisplay(ach))
     end
   end
 

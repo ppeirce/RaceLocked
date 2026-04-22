@@ -75,8 +75,9 @@ function Comms.BuildPayload(raceToken, row)
   end
   local c = row.classes or Comms.EmptyClasses()
   local ts = tonumber(row.timestamp) or 0
+  local deaths = tonumber(row.guildDeaths) or 0
   return table.concat({
-    'v3',
+    'v4',
     tostring(raceToken or ''),
     Comms.SanitizeGuildName(row.guildName or ''),
     tostring(tonumber(row.guildSize) or 0),
@@ -100,6 +101,7 @@ function Comms.BuildPayload(raceToken, row)
     tostring(classWireCount(c.shamans)),
     tostring(classWireAverage(c.shamans)),
     tostring(ts),
+    tostring(deaths),
   }, Comms.WIRE_FIELD_SEP)
 end
 
@@ -124,7 +126,11 @@ function Comms.ParsePayload(msg)
 
   local wireVersion = p[1]
   local timestamp = 0
-  if wireVersion == 'v3' and #p >= 24 then
+  local guildDeaths = 0
+  if wireVersion == 'v4' and #p >= 25 then
+    timestamp = tonumber(p[24]) or 0
+    guildDeaths = tonumber(p[25]) or 0
+  elseif wireVersion == 'v3' and #p >= 24 then
     timestamp = tonumber(p[24]) or 0
   elseif wireVersion == 'v2' and #p >= 15 then
     timestamp = tonumber(p[15]) or 0
@@ -146,7 +152,7 @@ function Comms.ParsePayload(msg)
     guildName = guildName,
     guildSize = tonumber(p[4]) or 0,
     averageLevel = tonumber(p[5]) or 0,
-    classes = wireVersion == 'v3' and {
+    classes = (wireVersion == 'v3' or wireVersion == 'v4') and {
       druids = { count = tonumber(p[6]) or 0, averageLevel = tonumber(p[7]) or 0 },
       rogues = { count = tonumber(p[8]) or 0, averageLevel = tonumber(p[9]) or 0 },
       hunters = { count = tonumber(p[10]) or 0, averageLevel = tonumber(p[11]) or 0 },
@@ -168,5 +174,6 @@ function Comms.ParsePayload(msg)
       shamans = { count = tonumber(p[14]) or 0, averageLevel = 0 },
     },
     timestamp = timestamp,
+    guildDeaths = guildDeaths,
   }
 end

@@ -1,0 +1,67 @@
+-- Guild-scoped addon messages: notify guildmates on player death so everyone can bump stored `guildDeaths`.
+
+RaceLocked_GuildChampion = RaceLocked_GuildChampion or {}
+
+RaceLocked_GuildChampion.GUILD_DEATH_ADDON_PREFIX = 'RLGuildDeath'
+
+local PREFIX = RaceLocked_GuildChampion.GUILD_DEATH_ADDON_PREFIX
+
+local function registerPrefix()
+  if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+    C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
+  elseif RegisterAddonMessagePrefix then
+    RegisterAddonMessagePrefix(PREFIX)
+  end
+end
+
+local function isSenderLocalPlayer(sender)
+  if type(sender) ~= 'string' or sender == '' then
+    return false
+  end
+  if GetUnitName then
+    local full = GetUnitName('player', true)
+    if full and full ~= '' and sender == full then
+      return true
+    end
+  end
+  if UnitName then
+    return sender == UnitName('player')
+  end
+  return false
+end
+
+local function sendGuildDeathPing()
+  if not IsInGuild or not IsInGuild() then
+    return
+  end
+  if not SendAddonMessage then
+    return
+  end
+  SendAddonMessage(PREFIX, '1', 'GUILD')
+end
+
+--- Call on local `PLAYER_DEAD` while in a guild (after incrementing stored counts).
+function RaceLocked_GuildChampion_BroadcastGuildDeathPing()
+  sendGuildDeathPing()
+end
+
+--- Handle `CHAT_MSG_ADDON` for guild death pings (increment; do not re-broadcast).
+function RaceLocked_GuildChampion_OnGuildDeathAddonMessage(prefix, message, channel, sender)
+  if prefix ~= PREFIX then
+    return
+  end
+  if not IsInGuild or not IsInGuild() then
+    return
+  end
+  if isSenderLocalPlayer(sender) then
+    return
+  end
+  if RaceLocked_GuildChampion_IncrementGuildDeathsForOwnGuild then
+    RaceLocked_GuildChampion_IncrementGuildDeathsForOwnGuild()
+  end
+end
+
+--- Register prefix once; safe to call multiple times.
+function RaceLocked_GuildChampion_EnsureGuildDeathAddonPrefixRegistered()
+  registerPrefix()
+end

@@ -50,6 +50,8 @@ service:RegisterEvent('ADDON_LOADED')
 service:RegisterEvent('PLAYER_LOGIN')
 service:RegisterEvent('PLAYER_ENTERING_WORLD')
 service:RegisterEvent('CHAT_MSG_CHANNEL')
+service:RegisterEvent('CHAT_MSG_ADDON')
+service:RegisterEvent('PLAYER_DEAD')
 service:RegisterEvent('CHANNEL_UI_UPDATE')
 service:SetScript('OnEvent', function(_, event, ...)
   if event == 'ADDON_LOADED' then
@@ -57,6 +59,9 @@ service:SetScript('OnEvent', function(_, event, ...)
     if loadedAddonName == thisAddonName then
       if RaceLocked_GuildChampion_EnsureStoredGuildReportsDB then
         RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
+      end
+      if RaceLocked_GuildChampion_EnsureGuildDeathAddonPrefixRegistered then
+        RaceLocked_GuildChampion_EnsureGuildDeathAddonPrefixRegistered()
       end
       Comms.InstallChannelNoticeFilters()
       Comms.ScheduleDelayedDataChannelJoin()
@@ -73,6 +78,24 @@ service:SetScript('OnEvent', function(_, event, ...)
   end
   if event == 'CHANNEL_UI_UPDATE' then
     Comms.EnsureDataChannelJoined()
+    return
+  end
+  if event == 'CHAT_MSG_ADDON' then
+    local prefix, msg, channel, sender = ...
+    if RaceLocked_GuildChampion_OnGuildDeathAddonMessage then
+      RaceLocked_GuildChampion_OnGuildDeathAddonMessage(prefix, msg, channel, sender)
+    end
+    return
+  end
+  if event == 'PLAYER_DEAD' then
+    if IsInGuild and IsInGuild() then
+      if RaceLocked_GuildChampion_IncrementGuildDeathsForOwnGuild then
+        RaceLocked_GuildChampion_IncrementGuildDeathsForOwnGuild()
+      end
+      if RaceLocked_GuildChampion_BroadcastGuildDeathPing then
+        RaceLocked_GuildChampion_BroadcastGuildDeathPing()
+      end
+    end
     return
   end
   if event == 'CHAT_MSG_CHANNEL' then
