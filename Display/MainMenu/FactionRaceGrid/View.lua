@@ -55,32 +55,90 @@ end
 --- @return Frame pane, Texture icon, FontString labelFs, FontString detailFs
 local function createRaceStatPane(root, raceToken, raceAccent)
   local G = RaceLocked_GuildChampion
+  local paneH = math.max(1, (tonumber(G.STATS_ROW_H) or 0) - 25)
 
   local f = CreateFrame('Frame', nil, root, 'BackdropTemplate')
   f:SetBackdrop(G.CELL_BACKDROP)
   f:SetBackdropColor(G.AP_BG.r, G.AP_BG.g, G.AP_BG.b, G.AP_BG.a)
   f:SetBackdropBorderColor(G.AP_BORDER.r, G.AP_BORDER.g, G.AP_BORDER.b, G.AP_BORDER.a)
-  f:SetHeight(G.STATS_ROW_H)
-
-  local accent = f:CreateTexture(nil, 'BORDER')
-  accent:SetColorTexture(raceAccent[1], raceAccent[2], raceAccent[3], 1)
-  accent:SetWidth(G.ACCENT_W)
-  accent:SetPoint('TOPLEFT', f, 'TOPLEFT', G.ACCENT_INSET_X, -G.ACCENT_INSET_Y)
-  accent:SetPoint('BOTTOMLEFT', f, 'BOTTOMLEFT', G.ACCENT_INSET_X, G.ACCENT_INSET_Y)
+  f:SetHeight(paneH)
 
   local icon = f:CreateTexture(nil, 'OVERLAY')
   icon:SetTexture(RaceLocked_GuildChampion_RaceIconTexture(raceToken))
   icon:SetTexCoord(0, 1, 0, 1)
   icon:SetSize(G.FACTION_ICON_SIZE, G.FACTION_ICON_SIZE)
   icon:Show()
+  icon:EnableMouse(true)
+  icon:SetScript('OnEnter', function(self)
+    if not GameTooltip then
+      return
+    end
+    local raceName = (G.RACE_LABEL and G.RACE_LABEL[raceToken]) or raceToken
+    GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
+    GameTooltip:ClearLines()
+    GameTooltip:AddLine(raceName, 1, 0.92, 0.62)
+    GameTooltip:Show()
+  end)
+  icon:SetScript('OnLeave', function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
 
   local lbl = f:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightLarge')
   lbl:SetJustifyH('LEFT')
   lbl:SetTextColor(G.LABEL_GOLD[1] * 0.9, G.LABEL_GOLD[2] * 0.9, G.LABEL_GOLD[3] * 0.9)
 
-  f._rankFs = f:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
-  f._rankFs:SetJustifyH('RIGHT')
-  f._rankFs:SetTextColor(G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85)
+  f._skullCountFs = f:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
+  f._skullCountFs:SetJustifyH('RIGHT')
+  f._skullCountFs:SetTextColor(G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85)
+  f._skullCountFs:SetText('0')
+
+  f._skullIcon = f:CreateTexture(nil, 'OVERLAY')
+  f._skullIcon:SetTexture('Interface\\AddOns\\RaceLocked\\Textures\\skull.png')
+  f._skullIcon:SetSize(16, 16)
+
+  f._skullInfoHit = CreateFrame('Frame', nil, f)
+  f._skullInfoHit:EnableMouse(true)
+  f._skullInfoHit:SetScript('OnEnter', function(self)
+    if not GameTooltip then
+      return
+    end
+    GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
+    GameTooltip:AddLine('Total number of Deaths', 1, 0.92, 0.62)
+    GameTooltip:AddLine('Only includes players with the addon', 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  f._skullInfoHit:SetScript('OnLeave', function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
+
+  f._achievementPointsFs = f:CreateFontString(nil, 'OVERLAY', 'GameFontNormal')
+  f._achievementPointsFs:SetJustifyH('RIGHT')
+  f._achievementPointsFs:SetTextColor(G.LABEL_GOLD[1] * 0.85, G.LABEL_GOLD[2] * 0.85, G.LABEL_GOLD[3] * 0.85)
+  f._achievementPointsFs:SetText('0')
+
+  f._achievementIcon = f:CreateTexture(nil, 'OVERLAY')
+  f._achievementIcon:SetTexture('Interface\\AddOns\\RaceLocked\\Textures\\HardcoreAchievementsButton.png')
+  f._achievementIcon:SetSize(16, 16)
+
+  f._achievementInfoHit = CreateFrame('Frame', nil, f)
+  f._achievementInfoHit:EnableMouse(true)
+  f._achievementInfoHit:SetScript('OnEnter', function(self)
+    if not GameTooltip then
+      return
+    end
+    GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
+    GameTooltip:AddLine('Race average achievement points', 1, 0.92, 0.62)
+    GameTooltip:Show()
+  end)
+  f._achievementInfoHit:SetScript('OnLeave', function()
+    if GameTooltip then
+      GameTooltip:Hide()
+    end
+  end)
 
   local det = f:CreateFontString(nil, 'OVERLAY', 'GameFontHighlight')
   det:SetJustifyH('CENTER')
@@ -89,10 +147,10 @@ local function createRaceStatPane(root, raceToken, raceAccent)
   f._detailFs = det
 
   f._guildSectionTitle = f:CreateFontString(nil, 'OVERLAY', 'GameFontDisableSmall')
-  f._guildSectionTitle:SetJustifyH('CENTER')
+  f._guildSectionTitle:SetJustifyH('LEFT')
 
-  f._guildNames = f:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall')
-  f._guildNames:SetJustifyH('CENTER')
+  f._guildNames = f:CreateFontString(nil, 'OVERLAY', 'GameFontHighlight')
+  f._guildNames:SetJustifyH('LEFT')
   f._guildNames:SetJustifyV('TOP')
   f._guildNames:SetWordWrap(true)
 
@@ -167,7 +225,7 @@ end
 
 local function textLeftOffset()
   local G = RaceLocked_GuildChampion
-  return G.ACCENT_INSET_X + G.ACCENT_W + G.GAP_AFTER_ACCENT + G.FACTION_ICON_SIZE + G.GAP_AFTER_ICON
+  return G.ACCENT_INSET_X + G.GAP_AFTER_ACCENT + G.FACTION_ICON_SIZE + G.GAP_AFTER_ICON
 end
 
 --- @param pane Frame
@@ -180,34 +238,34 @@ local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
   local lg = G.RACE_GRID_PANE_SECTION_GAP or 0
   local w = pane:GetWidth() - tx - G.INNER_PAD
   w = math.max(w, 48)
-  -- Class bar: full inner width of the cell (not aligned to text column after the icon).
-  local barLeft = G.INNER_PAD + G.CLASS_BAR_EXTRA_LEFT_PAD
-  local barW = pane:GetWidth() - barLeft - G.INNER_PAD
-  barW = math.max(barW, 48)
+  local panelLeft = G.INNER_PAD
+  local panelW = pane:GetWidth() - 2 * G.INNER_PAD
+  panelW = math.max(panelW, 48)
 
   labelFs:ClearAllPoints()
   labelFs:SetPoint('TOPLEFT', pane, 'TOPLEFT', tx, -6)
-  local labelW = pane._rankFs and math.max(40, w - 40) or w
+  local labelW = pane._skullIcon and math.max(40, w - 56) or w
   labelFs:SetWidth(labelW)
+  labelFs:SetText('')
 
   local guildH = pane._guildSectionTitle
   guildH:ClearAllPoints()
-  guildH:SetPoint('TOPLEFT', labelFs, 'BOTTOMLEFT', barLeft - tx, -(10 + lg))
-  guildH:SetWidth(barW)
+  guildH:SetPoint('TOPLEFT', pane, 'TOPLEFT', tx, -4 - lg)
+  guildH:SetWidth(w)
 
   local gNames = pane._guildNames
   gNames:ClearAllPoints()
-  gNames:SetPoint('TOPLEFT', guildH, 'BOTTOMLEFT', 0, -1)
-  gNames:SetWidth(barW)
+  gNames:SetPoint('TOPLEFT', guildH, 'BOTTOMLEFT', 0, -2)
+  gNames:SetWidth(w)
 
   local avgSub = pane._avgSubtitle
   local totalSub = pane._totalPlayersSubtitle
   local totalFs = pane._totalPlayersFs
   local statsGap = 8
-  local avgW = math.max(24, math.floor((barW - statsGap) / 2))
-  local totalW = math.max(24, barW - avgW - statsGap)
+  local avgW = math.max(24, math.floor((panelW - statsGap) / 2))
+  local totalW = math.max(24, panelW - avgW - statsGap)
   avgSub:ClearAllPoints()
-  avgSub:SetPoint('TOPLEFT', gNames, 'BOTTOMLEFT', 0, -(5 + lg))
+  avgSub:SetPoint('TOPLEFT', gNames, 'BOTTOMLEFT', panelLeft - tx, -(10 + lg))
   avgSub:SetWidth(avgW)
 
   totalSub:ClearAllPoints()
@@ -224,25 +282,25 @@ local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
 
   local cSub = pane._classSubtitle
   cSub:ClearAllPoints()
-  cSub:SetPoint('TOPLEFT', detailFs, 'BOTTOMLEFT', 0, -(11 + lg))
-  cSub:SetWidth(barW)
+  cSub:SetPoint('TOPLEFT', detailFs, 'BOTTOMLEFT', 0, -(1 + lg))
+  cSub:SetWidth(panelW)
 
   local host = pane._classBarHost
   host:ClearAllPoints()
   host:SetPoint('TOPLEFT', cSub, 'BOTTOMLEFT', 0, -4)
-  host:SetWidth(barW)
+  host:SetWidth(panelW)
   host:SetHeight(G.CLASS_BAR_HOST_H)
 
   local pctRow = pane._classBarPctRow
   pctRow:ClearAllPoints()
   pctRow:SetPoint('TOPLEFT', host, 'TOPLEFT', 0, 0)
-  pctRow:SetWidth(barW)
+  pctRow:SetWidth(panelW)
   pctRow:SetHeight(G.CLASS_BAR_LABEL_ROW)
 
   local well = pane._classBarBarWell
   well:ClearAllPoints()
   well:SetPoint('BOTTOMLEFT', host, 'BOTTOMLEFT', 0, 0)
-  well:SetWidth(barW)
+  well:SetWidth(panelW)
   well:SetHeight(G.CLASS_BAR_HEIGHT + 2 * G.CLASS_BAR_BORDER_PAD)
 
   local pad = G.CLASS_BAR_BORDER_PAD
@@ -252,9 +310,31 @@ local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
   row:SetPoint('TOPRIGHT', well, 'TOPRIGHT', -pad, -pad)
   row:SetHeight(G.CLASS_BAR_HEIGHT)
 
-  if pane._rankFs then
-    pane._rankFs:ClearAllPoints()
-    pane._rankFs:SetPoint('TOPRIGHT', pane, 'TOPRIGHT', -G.INNER_PAD, -4)
+  if pane._skullIcon then
+    pane._skullIcon:ClearAllPoints()
+    pane._skullIcon:SetPoint('TOPRIGHT', pane, 'TOPRIGHT', -G.INNER_PAD + 4, -4)
+  end
+  if pane._skullCountFs and pane._skullIcon then
+    pane._skullCountFs:ClearAllPoints()
+    pane._skullCountFs:SetPoint('RIGHT', pane._skullIcon, 'LEFT', -4, -1)
+  end
+  if pane._skullInfoHit and pane._skullIcon then
+    pane._skullInfoHit:ClearAllPoints()
+    pane._skullInfoHit:SetPoint('TOPRIGHT', pane._skullIcon, 'TOPRIGHT', 0, 0)
+    pane._skullInfoHit:SetPoint('BOTTOMLEFT', pane._skullIcon, 'BOTTOMLEFT', -24, 0)
+  end
+  if pane._achievementIcon and pane._skullIcon then
+    pane._achievementIcon:ClearAllPoints()
+    pane._achievementIcon:SetPoint('TOPRIGHT', pane._skullIcon, 'BOTTOMRIGHT', 0, -3)
+  end
+  if pane._achievementPointsFs and pane._achievementIcon then
+    pane._achievementPointsFs:ClearAllPoints()
+    pane._achievementPointsFs:SetPoint('RIGHT', pane._achievementIcon, 'LEFT', -4, -1)
+  end
+  if pane._achievementInfoHit and pane._achievementIcon then
+    pane._achievementInfoHit:ClearAllPoints()
+    pane._achievementInfoHit:SetPoint('TOPRIGHT', pane._achievementIcon, 'TOPRIGHT', 0, 0)
+    pane._achievementInfoHit:SetPoint('BOTTOMLEFT', pane._achievementIcon, 'BOTTOMLEFT', -24, 0)
   end
 end
 
@@ -288,6 +368,7 @@ end
 --- @param ctx table
 local function layoutGrid(ctx)
   local G = RaceLocked_GuildChampion
+  local paneH = math.max(1, (tonumber(G.STATS_ROW_H) or 0) - 30)
   local root = ctx.root
   local parent = ctx.parent
   local scrollFrame = ctx.scrollFrame
@@ -332,7 +413,7 @@ local function layoutGrid(ctx)
     local rightIdx = ri <= numRaces and order[ri] or nil
 
     panes[leftIdx]:ClearAllPoints()
-    panes[leftIdx]:SetSize(wLeft, G.STATS_ROW_H)
+    panes[leftIdx]:SetSize(wLeft, paneH)
     if row == 1 then
       panes[leftIdx]:SetPoint('TOPLEFT', scrollChild, 'TOPLEFT', 0, -gridTop)
     else
@@ -342,7 +423,7 @@ local function layoutGrid(ctx)
 
     if rightIdx then
       panes[rightIdx]:ClearAllPoints()
-      panes[rightIdx]:SetSize(wRight, G.STATS_ROW_H)
+      panes[rightIdx]:SetSize(wRight, paneH)
       panes[rightIdx]:SetPoint('TOPLEFT', panes[leftIdx], 'TOPRIGHT', G.MID_GAP, 0)
     end
   end
@@ -352,15 +433,19 @@ local function layoutGrid(ctx)
     local icon = icons[j]
     icon:ClearAllPoints()
     icon:SetSize(G.FACTION_ICON_SIZE, G.FACTION_ICON_SIZE)
-    icon:SetPoint('LEFT', panes[j], 'LEFT', G.ACCENT_INSET_X + G.ACCENT_W + G.GAP_AFTER_ACCENT, 0)
+    icon:SetPoint('LEFT', panes[j], 'LEFT', G.ACCENT_INSET_X + G.GAP_AFTER_ACCENT - 3, 0)
     icon:SetPoint('TOP', panes[j], 'TOP', 0, -6)
   end
 
   local tx = textLeftOffset()
   for i = 1, numRaces do
     layoutRaceGridPane(panes[i], ctx.labels[i], ctx.details[i], tx, ctx.raceTokens[i])
-    if panes[i]._rankFs then
-      panes[i]._rankFs:SetText('#' .. tostring(rankByIdx[i]))
+    ctx.labels[i]:SetText('')
+    if panes[i]._skullCountFs then
+      panes[i]._skullCountFs:SetText('0')
+    end
+    if panes[i]._achievementPointsFs then
+      panes[i]._achievementPointsFs:SetText('0')
     end
   end
 
@@ -369,7 +454,7 @@ local function layoutGrid(ctx)
   ctx.refreshRow:SetPoint('BOTTOMRIGHT', root, 'BOTTOMRIGHT', 0, G.OUTER_PAD_Y)
 
   local gridContentH = gridTop
-    + numRows * G.STATS_ROW_H
+    + numRows * paneH
     + math.max(0, numRows - 1) * G.ROW_GAP
     + G.OUTER_PAD_Y
   scrollChild:SetHeight(gridContentH)
@@ -385,6 +470,7 @@ end
 --- @return number total height
 function RaceLocked_CreateFactionRaceGrid(parent)
   local G = RaceLocked_GuildChampion
+  local paneH = math.max(1, (tonumber(G.STATS_ROW_H) or 0) - 30)
 
   local raceTokens = G.RACE_GRID_ALL_TOKENS
     or { 'Human', 'Dwarf', 'NightElf', 'Gnome', 'Orc', 'Troll', 'Tauren', 'Scourge' }
@@ -392,7 +478,7 @@ function RaceLocked_CreateFactionRaceGrid(parent)
   local numRows = math.max(1, math.ceil(numRaces / 2))
   local totalH = G.OUTER_PAD_Y
     + G.GRID_TOP_OFFSET
-    + numRows * G.STATS_ROW_H
+    + numRows * paneH
     + math.max(0, numRows - 1) * G.ROW_GAP
     + G.GAP_AFTER_GRID
     + G.REFRESH_ROW_H
@@ -442,6 +528,7 @@ function RaceLocked_CreateFactionRaceGrid(parent)
   local labels = {}
   local details = {}
   local icons = {}
+  local baseRaceLabels = {}
 
   for i = 1, numRaces do
     local token = raceTokens[i]
@@ -451,7 +538,9 @@ function RaceLocked_CreateFactionRaceGrid(parent)
     labels[i] = lbl
     details[i] = det
     icons[i] = icon
-    lbl:SetText((G.RACE_LABEL and G.RACE_LABEL[token]) or token)
+    local baseRaceName = (G.RACE_LABEL and G.RACE_LABEL[token]) or token
+    baseRaceLabels[i] = baseRaceName
+    lbl:SetText(baseRaceName)
   end
 
   local layoutCtx = {
@@ -464,6 +553,7 @@ function RaceLocked_CreateFactionRaceGrid(parent)
     labels = labels,
     details = details,
     icons = icons,
+    baseRaceLabels = baseRaceLabels,
     raceTokens = raceTokens,
     playerRaceToken = playerRaceToken,
     totalH = totalH,

@@ -58,17 +58,12 @@ function RaceLocked_GuildChampion_OnClassBarCellEnter(self)
   else
     local key = cell._rlClassKey
     local count = cell._rlCount or 0
-    local total = cell._rlTotal or 0
     local averageLevel = cell._rlAverageLevel or 0
     local label = classLabelForReportKey(G, key)
     local r, g, b = classColorForReportKey(G, key)
     GameTooltip:AddLine(label, r, g, b)
-    local pct = 0
-    if total > 0 then
-      pct = math.floor((100 * count / total) + 0.5)
-    end
     GameTooltip:AddLine(
-      string.format('%d of %d characters (%d%%)', count, total, pct),
+      string.format('%d players', count),
       1,
       1,
       1
@@ -174,6 +169,12 @@ local function formatGuildLastUpdate(ts)
   if n <= 0 then
     return 'Never'
   end
+  if RaceLocked_GuildChampion_FormatUnixAsEasternFriendly then
+    local s = RaceLocked_GuildChampion_FormatUnixAsEasternFriendly(n)
+    if s and s ~= '' then
+      return s
+    end
+  end
   if RaceLocked_GuildChampion_FormatUnixAsEastern then
     local s = RaceLocked_GuildChampion_FormatUnixAsEastern(n)
     if s and s ~= '' then
@@ -230,7 +231,7 @@ local function ensureGuildNamesTooltip(pane, raceToken)
       end
       GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
       GameTooltip:ClearLines()
-      GameTooltip:AddLine('Guild Last Update (US Eastern)', 1, 0.92, 0.62)
+      GameTooltip:AddLine('Guild Last Update', 1, 0.92, 0.62)
       for _, row in ipairs(rows) do
         local guildName = type(row.guildName) == 'string' and row.guildName or ''
         if guildName ~= '' then

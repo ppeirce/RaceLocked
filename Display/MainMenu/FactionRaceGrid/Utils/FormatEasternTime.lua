@@ -76,3 +76,48 @@ function RaceLocked_GuildChampion_FormatUnixAsEastern(n)
   end
   return tostring(n)
 end
+
+--- Friendly relative age string, e.g. "1 hr ago", "2 days ago".
+--- @param n number positive Unix instant
+--- @return string
+function RaceLocked_GuildChampion_FormatUnixAsEasternFriendly(n)
+  n = floor(tonumber(n) or 0)
+  if n <= 0 then
+    return ''
+  end
+  if not time then
+    return ''
+  end
+  local now = floor(tonumber(time()) or 0)
+  if now <= 0 then
+    return ''
+  end
+
+  local diff = now - n
+  if diff < 0 then
+    diff = 0
+  end
+
+  if diff < (10 * 60) then
+    return 'Just now'
+  end
+  if diff < 3600 then
+    local mins = floor(diff / 60)
+    if mins <= 1 then
+      return '1 min ago'
+    end
+    return tostring(mins) .. ' mins ago'
+  end
+  if diff < 86400 then
+    local hrs = floor(diff / 3600)
+    if hrs <= 1 then
+      return '1 hr ago'
+    end
+    return tostring(hrs) .. ' hrs ago'
+  end
+  local days = floor(diff / 86400)
+  if days <= 1 then
+    return '1 day ago'
+  end
+  return tostring(days) .. ' days ago'
+end
