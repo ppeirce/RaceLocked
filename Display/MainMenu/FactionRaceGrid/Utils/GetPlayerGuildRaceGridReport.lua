@@ -19,7 +19,11 @@ end
 local function emptyClasses()
   local t = {}
   for i = 1, #G.CLASS_REPORT_KEYS do
-    t[G.CLASS_REPORT_KEYS[i].key] = 0
+    t[G.CLASS_REPORT_KEYS[i].key] = {
+      count = 0,
+      sumLevel = 0,
+      averageLevel = 0,
+    }
   end
   return t
 end
@@ -134,13 +138,30 @@ function RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
       local effClass = engClass and string.upper(tostring(engClass)) or nil
       local rk = effClass and fileToReportKey[effClass]
       if rk then
-        classes[rk] = (classes[rk] or 0) + 1
+        local classEntry = classes[rk]
+        if type(classEntry) ~= 'table' then
+          classEntry = { count = 0, sumLevel = 0, averageLevel = 0 }
+          classes[rk] = classEntry
+        end
+        classEntry.count = (tonumber(classEntry.count) or 0) + 1
+        if levelNum > 0 then
+          classEntry.sumLevel = (tonumber(classEntry.sumLevel) or 0) + levelNum
+        end
       end
     end
   end
   if n < 1 then
     return nil
   end
+  for _, classEntry in pairs(classes) do
+    if type(classEntry) == 'table' then
+      local classCount = tonumber(classEntry.count) or 0
+      local classSumLevel = tonumber(classEntry.sumLevel) or 0
+      classEntry.averageLevel = classCount > 0 and (classSumLevel / classCount) or 0
+      classEntry.sumLevel = nil
+    end
+  end
+
   return {
     guildName = guildName:match('^%s*(.-)%s*$') or guildName,
     guildSize = n,

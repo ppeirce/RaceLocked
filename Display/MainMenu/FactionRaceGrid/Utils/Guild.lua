@@ -59,6 +59,7 @@ function RaceLocked_GuildChampion_OnClassBarCellEnter(self)
     local key = cell._rlClassKey
     local count = cell._rlCount or 0
     local total = cell._rlTotal or 0
+    local averageLevel = cell._rlAverageLevel or 0
     local label = classLabelForReportKey(G, key)
     local r, g, b = classColorForReportKey(G, key)
     GameTooltip:AddLine(label, r, g, b)
@@ -72,6 +73,11 @@ function RaceLocked_GuildChampion_OnClassBarCellEnter(self)
       1,
       1
     )
+    if averageLevel > 0 then
+      GameTooltip:AddLine(string.format('Avg level: %d', math.floor(averageLevel + 0.5)), 1, 1, 1)
+    else
+      GameTooltip:AddLine('Avg level: -', 1, 1, 1)
+    end
   end
   GameTooltip:Show()
 end
@@ -177,6 +183,24 @@ local function formatGuildLastUpdate(ts)
   return tostring(math.floor(n))
 end
 
+--- @param classEntry number|table|nil
+--- @return number
+local function classCount(classEntry)
+  if type(classEntry) == 'table' then
+    return tonumber(classEntry.count) or 0
+  end
+  return tonumber(classEntry) or 0
+end
+
+--- @param classEntry number|table|nil
+--- @return number
+local function classAverageLevel(classEntry)
+  if type(classEntry) == 'table' then
+    return tonumber(classEntry.averageLevel) or 0
+  end
+  return 0
+end
+
 --- @param pane Frame
 --- @param raceToken string
 local function ensureGuildNamesTooltip(pane, raceToken)
@@ -271,8 +295,8 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
 
     local classes = (agg and agg.classes) or {}
     local totalPlayers = 0
-    for _, n in pairs(classes) do
-      totalPlayers = totalPlayers + (tonumber(n) or 0)
+    for _, classEntry in pairs(classes) do
+      totalPlayers = totalPlayers + classCount(classEntry)
     end
     if totalPlayers > 0 then
       pane._totalPlayersFs:SetText(tostring(totalPlayers))
@@ -289,7 +313,7 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
     local nKeys = #keys
     local total = 0
     for _, k in ipairs(keys) do
-      total = total + (tonumber(classes[k]) or 0)
+      total = total + classCount(classes[k])
     end
 
     local row = pane._classBarRow
@@ -316,6 +340,7 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
         c._rlClassKey = nil
         c._rlCount = nil
         c._rlTotal = nil
+        c._rlAverageLevel = nil
         if c.pctHit then
           c.pctHit:Hide()
         end
@@ -363,7 +388,7 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
         local assigned = 0
         for j = 1, nKeys - 1 do
           local k = keys[j]
-          local c = tonumber(classes[k]) or 0
+          local c = classCount(classes[k])
           local wpx = math.floor((c / total) * hostW)
           widths[j] = wpx
           assigned = assigned + wpx
@@ -376,7 +401,7 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
             break
           end
           local classKey = keys[idx]
-          local c = tonumber(classes[classKey]) or 0
+          local c = classCount(classes[classKey])
           local wpx = widths[idx] or 0
           local r, g, b = classColorForReportKey(G, classKey)
           if wpx <= 0 then
@@ -393,6 +418,7 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
             cell._rlClassKey = classKey
             cell._rlCount = c
             cell._rlTotal = total
+            cell._rlAverageLevel = classAverageLevel(classes[classKey])
           end
         end
         for idx = nKeys + 1, 9 do

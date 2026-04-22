@@ -151,6 +151,9 @@ G.MIN_GUILD_MEMBERS_FOR_RACE_GRID_BY_GUILD = {
   ['stonecore'] = 800,
   ['elfcore'] = 800,
   ['herdcore'] = 800,
+  ['deadcore'] = 600,
+  ['zugcore'] = 600,
+  ['hardingo'] = 600,
 }
 
 --- @param guildName string|nil

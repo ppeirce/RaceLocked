@@ -7,15 +7,15 @@ local G = RaceLocked_GuildChampion
 
 local function zeroClasses()
   return {
-    druids = 0,
-    rogues = 0,
-    hunters = 0,
-    warriors = 0,
-    mages = 0,
-    priests = 0,
-    warlocks = 0,
-    paladins = 0,
-    shamans = 0,
+    druids = { count = 0, averageLevel = 0 },
+    rogues = { count = 0, averageLevel = 0 },
+    hunters = { count = 0, averageLevel = 0 },
+    warriors = { count = 0, averageLevel = 0 },
+    mages = { count = 0, averageLevel = 0 },
+    priests = { count = 0, averageLevel = 0 },
+    warlocks = { count = 0, averageLevel = 0 },
+    paladins = { count = 0, averageLevel = 0 },
+    shamans = { count = 0, averageLevel = 0 },
   }
 end
 
@@ -66,7 +66,19 @@ local function copyClasses(classes)
   local src = type(classes) == 'table' and classes or {}
   local c = zeroClasses()
   for k, _ in pairs(c) do
-    c[k] = tonumber(src[k]) or 0
+    local classEntry = src[k]
+    if type(classEntry) == 'table' then
+      c[k] = {
+        count = tonumber(classEntry.count) or 0,
+        averageLevel = tonumber(classEntry.averageLevel) or 0,
+      }
+    else
+      -- Backward-compatible upgrade from older numeric-only class counts.
+      c[k] = {
+        count = tonumber(classEntry) or 0,
+        averageLevel = 0,
+      }
+    end
   end
   return c
 end

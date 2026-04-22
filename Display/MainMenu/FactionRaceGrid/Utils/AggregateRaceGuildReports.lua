@@ -19,15 +19,15 @@ end
 
 local function zeroClassesAggregate()
   return {
-    druids = 0,
-    rogues = 0,
-    hunters = 0,
-    warriors = 0,
-    mages = 0,
-    priests = 0,
-    warlocks = 0,
-    paladins = 0,
-    shamans = 0,
+    druids = { count = 0, averageLevel = 0 },
+    rogues = { count = 0, averageLevel = 0 },
+    hunters = { count = 0, averageLevel = 0 },
+    warriors = { count = 0, averageLevel = 0 },
+    mages = { count = 0, averageLevel = 0 },
+    priests = { count = 0, averageLevel = 0 },
+    warlocks = { count = 0, averageLevel = 0 },
+    paladins = { count = 0, averageLevel = 0 },
+    shamans = { count = 0, averageLevel = 0 },
   }
 end
 
@@ -41,15 +41,15 @@ function RaceLocked_GuildChampion_AggregateGuildsForRace(entries)
   local weightedSum = 0
   local names = {}
   local classes = {
-    druids = 0,
-    rogues = 0,
-    hunters = 0,
-    warriors = 0,
-    mages = 0,
-    priests = 0,
-    warlocks = 0,
-    paladins = 0,
-    shamans = 0,
+    druids = { count = 0, _sumLevel = 0 },
+    rogues = { count = 0, _sumLevel = 0 },
+    hunters = { count = 0, _sumLevel = 0 },
+    warriors = { count = 0, _sumLevel = 0 },
+    mages = { count = 0, _sumLevel = 0 },
+    priests = { count = 0, _sumLevel = 0 },
+    warlocks = { count = 0, _sumLevel = 0 },
+    paladins = { count = 0, _sumLevel = 0 },
+    shamans = { count = 0, _sumLevel = 0 },
   }
   for _, e in ipairs(entries) do
     local sz = tonumber(e.guildSize) or 0
@@ -63,10 +63,26 @@ function RaceLocked_GuildChampion_AggregateGuildsForRace(entries)
     end
     local c = e.classes
     if type(c) == 'table' then
-      for k, _ in pairs(classes) do
-        classes[k] = classes[k] + (tonumber(c[k]) or 0)
+      for k, outEntry in pairs(classes) do
+        local inEntry = c[k]
+        local inCount = 0
+        local inAvg = 0
+        if type(inEntry) == 'table' then
+          inCount = tonumber(inEntry.count) or 0
+          inAvg = tonumber(inEntry.averageLevel) or 0
+        else
+          inCount = tonumber(inEntry) or 0
+        end
+        outEntry.count = (tonumber(outEntry.count) or 0) + inCount
+        outEntry._sumLevel = (tonumber(outEntry._sumLevel) or 0) + (inAvg * inCount)
       end
     end
+  end
+  for _, classEntry in pairs(classes) do
+    local classCount = tonumber(classEntry.count) or 0
+    local classSumLevel = tonumber(classEntry._sumLevel) or 0
+    classEntry.averageLevel = classCount > 0 and (classSumLevel / classCount) or 0
+    classEntry._sumLevel = nil
   end
   return {
     guildNamesText = table.concat(names, ', '),
