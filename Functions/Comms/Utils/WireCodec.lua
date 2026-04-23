@@ -105,6 +105,20 @@ function Comms.BuildPayload(raceToken, row)
   }, Comms.WIRE_FIELD_SEP)
 end
 
+--- Guild death event payload on the RaceLockedDataBus channel.
+--- Carries guild identity so every client can increment the matching stored row.
+--- @param guildName string
+--- @param raceToken string
+--- @return string|nil
+function Comms.BuildGuildDeathPayload(guildName, raceToken)
+  local gn = Comms.SanitizeGuildName(guildName)
+  local rt = tostring(raceToken or '')
+  if gn == '' or rt == '' then
+    return nil
+  end
+  return table.concat({ 'd1', gn, rt }, Comms.WIRE_FIELD_SEP)
+end
+
 function Comms.ParsePayload(msg)
   if type(msg) ~= 'string' or msg == '' then
     return nil
@@ -121,6 +135,17 @@ function Comms.ParsePayload(msg)
 
   local p = { strsplit(Comms.WIRE_FIELD_SEP, inner) }
   if #p < 14 then
+    if p[1] == 'd1' and #p >= 3 then
+      local guildName = p[2]
+      local raceToken = p[3]
+      if guildName ~= '' and raceToken ~= '' then
+        return {
+          kind = 'guildDeath',
+          guildName = guildName,
+          raceToken = raceToken,
+        }
+      end
+    end
     return nil
   end
 

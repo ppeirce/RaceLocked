@@ -84,3 +84,62 @@ function Comms.ApplyIncomingReport(report)
   end
   return false
 end
+
+--- Apply a guild-death event coming from the RaceLockedDataBus channel.
+--- @param event table { guildName: string, raceToken: string }
+--- @return boolean
+function Comms.ApplyIncomingGuildDeath(event)
+  if type(event) ~= 'table' then
+    return false
+  end
+  local guildName = event.guildName
+  local raceToken = event.raceToken
+  if type(guildName) ~= 'string' or guildName == '' or type(raceToken) ~= 'string' or raceToken == '' then
+    return false
+  end
+  if RaceLocked_GuildChampion_EnsureStoredGuildReportsDB then
+    RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
+  end
+  if not RaceLocked_GuildChampion_IsGuildNameAllowedForRaceGrid then
+    return false
+  end
+  if not RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid then
+    return false
+  end
+  if not RaceLocked_GuildChampion_IsGuildNameAllowedForRaceGrid(guildName) then
+    return false
+  end
+
+  local rows = G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE and G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE[raceToken]
+  if type(rows) ~= 'table' then
+    return false
+  end
+  local incomingNorm = RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(guildName)
+  if incomingNorm == '' then
+    return false
+  end
+
+  for _, row in ipairs(rows) do
+    if type(row) == 'table' then
+      local rowNorm = RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(row.guildName)
+      if rowNorm ~= '' and rowNorm == incomingNorm then
+        row.guildDeaths = (tonumber(row.guildDeaths) or 0) + 1
+        print(
+          string.format(
+            '|cffffffffRace Locked|r: Received bus death event for %s (%s), incrementing guild deaths.',
+            tostring(guildName),
+            tostring(raceToken)
+          )
+        )
+        if RaceLocked_GuildChampion_PersistStoredGuildReportsByRace then
+          RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
+        end
+        if RaceLocked_GuildChampion_RequestRaceGridRerender then
+          RaceLocked_GuildChampion_RequestRaceGridRerender()
+        end
+        return true
+      end
+    end
+  end
+  return false
+end
