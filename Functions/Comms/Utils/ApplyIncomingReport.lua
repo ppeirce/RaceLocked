@@ -56,20 +56,23 @@ function Comms.ApplyIncomingReport(report)
       local rowNorm = RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(row.guildName)
       if rowNorm ~= '' and rowNorm == incomingNorm then
         local storedTs = tonumber(row.timestamp) or 0
-        local accept = incomingTs > storedTs
-        if not accept and incomingTs == 0 and storedTs == 0 then
-          accept = true
+        local acceptByTimestamp = incomingTs > storedTs
+        if not acceptByTimestamp and incomingTs == 0 and storedTs == 0 then
+          acceptByTimestamp = true
         end
-        if not accept then
-          return false
-        end
-        row.guildSize = report.guildSize
-        row.averageLevel = report.averageLevel
-        row.classes = report.classes or Comms.EmptyClasses()
-        row.timestamp = incomingTs
         local incomingDeaths = tonumber(report.guildDeaths) or 0
         local storedDeaths = tonumber(row.guildDeaths) or 0
-        if incomingDeaths > storedDeaths then
+        local acceptByDeaths = incomingDeaths > storedDeaths
+        if not acceptByTimestamp and not acceptByDeaths then
+          return false
+        end
+        if acceptByTimestamp then
+          row.guildSize = report.guildSize
+          row.averageLevel = report.averageLevel
+          row.classes = report.classes or Comms.EmptyClasses()
+          row.timestamp = incomingTs
+        end
+        if acceptByDeaths then
           row.guildDeaths = incomingDeaths
         end
         if RaceLocked_GuildChampion_PersistStoredGuildReportsByRace then
