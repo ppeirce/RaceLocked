@@ -50,6 +50,7 @@ service:RegisterEvent('ADDON_LOADED')
 service:RegisterEvent('PLAYER_LOGIN')
 service:RegisterEvent('PLAYER_ENTERING_WORLD')
 service:RegisterEvent('CHAT_MSG_CHANNEL')
+service:RegisterEvent('CHAT_MSG_ADDON')
 service:RegisterEvent('PLAYER_DEAD')
 service:RegisterEvent('CHANNEL_UI_UPDATE')
 service:SetScript('OnEvent', function(_, event, ...)
@@ -79,6 +80,13 @@ service:SetScript('OnEvent', function(_, event, ...)
     Comms.EnsureDataChannelJoined()
     return
   end
+  if event == 'CHAT_MSG_ADDON' then
+    local prefix, msg, channel, sender = ...
+    if RaceLocked_GuildChampion_OnGuildDeathAddonMessage then
+      RaceLocked_GuildChampion_OnGuildDeathAddonMessage(prefix, msg, channel, sender)
+    end
+    return
+  end
   if event == 'PLAYER_DEAD' then
     if IsInGuild and IsInGuild() then
       if RaceLocked_GuildChampion_IncrementGuildDeathsForOwnGuild then
@@ -97,12 +105,6 @@ service:SetScript('OnEvent', function(_, event, ...)
     local msg = select(1, ...)
     local report = Comms.ParsePayload(msg)
     if not report then
-      return
-    end
-    if report.kind == 'guildDeath' then
-      if Comms.ApplyIncomingGuildDeath then
-        Comms.ApplyIncomingGuildDeath(report)
-      end
       return
     end
     -- Keep incoming reports persisted, but do not force live UI rerenders;
