@@ -37,6 +37,7 @@ local function sendGuildDeathPing()
   if not SendAddonMessage then
     return
   end
+  print('|cffffffffRace Locked|r: Sending guild death ping.')
   SendAddonMessage(PREFIX, '1', 'GUILD')
 end
 
@@ -56,6 +57,12 @@ function RaceLocked_GuildChampion_OnGuildDeathAddonMessage(prefix, message, chan
   if isSenderLocalPlayer(sender) then
     return
   end
+  print(
+    string.format(
+      '|cffffffffRace Locked|r: Received guild death ping from %s, incrementing stored guild deaths.',
+      tostring(sender or 'unknown')
+    )
+  )
   if RaceLocked_GuildChampion_IncrementGuildDeathsForOwnGuild then
     RaceLocked_GuildChampion_IncrementGuildDeathsForOwnGuild()
   end
