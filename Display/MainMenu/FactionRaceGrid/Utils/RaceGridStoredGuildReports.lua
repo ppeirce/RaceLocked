@@ -86,15 +86,7 @@ local function copyClasses(classes)
 end
 
 local function minGuildMembersForStore()
-  local guildName = nil
-  if type(GetGuildInfo) == 'function' then
-    guildName = GetGuildInfo('player')
-  end
-  local minN = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID
-  if RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid then
-    minN = RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(guildName)
-  end
-  return tonumber(minN) or 500
+  return tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 600
 end
 
 local function coerceGuildRow(row, defaultRow)

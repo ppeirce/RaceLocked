@@ -141,39 +141,7 @@ G.RACE_GRID_TRUSTED_GUILDS_TITLE = 'Guild names accepted for addon-reported data
 G.TRUSTED_GUILDS_TITLE_TOP_GAP = 6
 
 --- Default roster size required to refresh the race grid from guild data or publish to the data bus (in-guild only).
-G.MIN_GUILD_MEMBERS_FOR_RACE_GRID = 100
-
---- Per-guild overrides for race-grid roster threshold (normalized guild names).
-G.MIN_GUILD_MEMBERS_FOR_RACE_GRID_BY_GUILD = {
-  ['Human Error'] = 600,
-  ['Honorcore'] = 400,
-  ['FOR GNOMEREGAN'] = 800,
-  ['STONECORE'] = 800,
-  ['ROCKCORE'] = 800,
-  ['ELFCORE'] = 800,
-  ['NELFCORE'] = 800,
-  ['HERDCORE'] = 800,
-  ['DEADCORE'] = 600,
-  ['ZUGCORE'] = 600,
-  ['Hardingo'] = 600,
-}
-
---- @param guildName string|nil
---- @return number
-function RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(guildName)
-  local defaultMin = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 500
-  local norm = ''
-  if RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid then
-    norm = RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(guildName)
-  elseif type(guildName) == 'string' then
-    norm = string.lower((guildName:match('^%s*(.-)%s*$') or ''))
-  end
-  if norm == '' then
-    return defaultMin
-  end
-  local byGuild = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID_BY_GUILD or {}
-  return tonumber(byGuild[norm]) or defaultMin
-end
+G.MIN_GUILD_MEMBERS_FOR_RACE_GRID = 600
 
 --- Display order for class keys (matches stored payload keys).
 G.CLASS_REPORT_KEYS = {
