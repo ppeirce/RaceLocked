@@ -1,5 +1,16 @@
 ### PATCH NOTES
 
+**1.0.5 (24-04-2026)**
+
+### Features
+
+- Race class average level
+- More compact display
+- Guild Last updated info on hover
+- Race deaths WIP
+- Race achievement points average WIP 
+
+
 **1.0.4 (21-04-2026)**
 
 ### Features
