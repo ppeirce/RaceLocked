@@ -141,19 +141,21 @@ G.RACE_GRID_TRUSTED_GUILDS_TITLE = 'Guild names accepted for addon-reported data
 G.TRUSTED_GUILDS_TITLE_TOP_GAP = 6
 
 --- Default roster size required to refresh the race grid from guild data or publish to the data bus (in-guild only).
-G.MIN_GUILD_MEMBERS_FOR_RACE_GRID = 500
+G.MIN_GUILD_MEMBERS_FOR_RACE_GRID = 300
 
 --- Per-guild overrides for race-grid roster threshold (normalized guild names).
 G.MIN_GUILD_MEMBERS_FOR_RACE_GRID_BY_GUILD = {
-  ['human error'] = 100,
-  ['honorcore'] = 100,
-  ['for gnomeregan'] = 800,
-  ['stonecore'] = 800,
-  ['elfcore'] = 800,
-  ['herdcore'] = 800,
-  ['deadcore'] = 600,
-  ['zugcore'] = 600,
-  ['hardingo'] = 600,
+  ['Human Error'] = 600,
+  ['Honorcore'] = 400,
+  ['FOR GNOMEREGAN'] = 800,
+  ['STONECORE'] = 800,
+  ['ROCKCORE'] = 800,
+  ['ELFCORE'] = 800,
+  ['NELFCORE'] = 800,
+  ['HERDCORE'] = 800,
+  ['DEADCORE'] = 600,
+  ['ZUGCORE'] = 600,
+  ['Hardingo'] = 600,
 }
 
 --- @param guildName string|nil
