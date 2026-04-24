@@ -1,5 +1,89 @@
+--- Pixels to subtract from the guild-names line width so text truncates before the full cell width.
+local GUILD_NAMES_TRUNCATE_EARLY_PX = 50
 
+--- Display-only: title-case each whitespace-delimited word in comma-separated guild names.
+--- (Stored and wire data are unchanged; tooltips use raw `row.guildName`.)
+--- @param word string
+--- @return string
+local function titleCaseOneWordDisplay(word)
+  if not word or word == '' then
+    return word or ''
+  end
+  return string.upper(string.sub(word, 1, 1)) .. string.lower(string.sub(word, 2, -1))
+end
 
+--- @param segment string one guild name (no commas)
+--- @return string
+local function titleCaseOneGuildNameSegment(segment)
+  segment = (segment or ''):gsub('^%s+', ''):gsub('%s+$', '')
+  if segment == '' then
+    return segment
+  end
+  local words = {}
+  for w in string.gmatch(segment, '%S+') do
+    words[#words + 1] = titleCaseOneWordDisplay(w)
+  end
+  return table.concat(words, ' ')
+end
+
+--- @param text string e.g. "foo bar, BAZ"
+--- @return string
+local function guildNamesCommaListToTitleCase(text)
+  if not text or text == '' then
+    return text
+  end
+  local segs = {}
+  for part in string.gmatch(text, '([^,]+)') do
+    local seg = (part:match('^%s*(.-)%s*$')) or part
+    if seg ~= '' then
+      segs[#segs + 1] = titleCaseOneGuildNameSegment(seg)
+    end
+  end
+  if #segs == 0 then
+    return text
+  end
+  return table.concat(segs, ', ')
+end
+
+--- Truncate a string so it fits on one line in `fs` (no wrapping); appends "..." when shortened.
+--- Full text should remain in tooltips or elsewhere; this is for display only.
+--- @param fs FontString
+--- @param text string
+--- @param maxW number
+--- @return string
+local function fitGuildNamesToSingleLine(fs, text, maxW)
+  if not text or text == '' then
+    return text or ''
+  end
+  if not fs or not maxW or maxW <= 0 then
+    return text
+  end
+  local ell = '...'
+  fs:SetText(text)
+  if (fs:GetStringWidth() or 0) <= maxW then
+    return text
+  end
+  fs:SetText(ell)
+  if (fs:GetStringWidth() or 0) > maxW then
+    return ''
+  end
+  local s = text
+  local lo, hi = 0, #s
+  while lo < hi do
+    local mid = math.floor((lo + hi + 1) / 2)
+    local trial = string.sub(s, 1, mid) .. ell
+    fs:SetText(trial)
+    if (fs:GetStringWidth() or 0) <= maxW then
+      lo = mid
+    else
+      hi = mid - 1
+    end
+  end
+  if lo == 0 then
+    return ell
+  end
+  return string.sub(s, 1, lo) .. ell
+end
 
 --- @param classKey string e.g. warriors
 --- @return number r, number g, number b
@@ -268,8 +352,18 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
     pane._guildSectionTitle:SetTextColor(subR, subG, subB)
 
     if agg and agg.guildNamesText and agg.guildNamesText ~= '' then
-      pane._guildNames:SetText(agg.guildNamesText)
-      pane._guildNames:SetTextColor(0.88, 0.86, 0.8)
+      local gNames = pane._guildNames
+      local w = (gNames.GetWidth and gNames:GetWidth()) or 0
+      if w <= 0 and pane.GetWidth then
+        w = math.max(48, (pane:GetWidth() or 0) - 2 * (G.INNER_PAD or 0) - 40)
+      end
+      if w > 0 then
+        w = math.max(1, w - GUILD_NAMES_TRUNCATE_EARLY_PX)
+      end
+      gNames:SetText(
+        fitGuildNamesToSingleLine(gNames, guildNamesCommaListToTitleCase(agg.guildNamesText), w)
+      )
+      gNames:SetTextColor(0.88, 0.86, 0.8)
       ensureGuildNamesTooltip(pane, token)
       pane._guildNamesHit:Show()
     else
@@ -298,6 +392,10 @@ function RaceLocked_GuildChampion_RefreshRaceGridDisplay(panes, raceTokens)
     local totalPlayers = 0
     for _, classEntry in pairs(classes) do
       totalPlayers = totalPlayers + classCount(classEntry)
+    end
+    local rosterTotal = (agg and tonumber(agg.totalRosterMembers)) or 0
+    if rosterTotal > 0 then
+      totalPlayers = math.floor(rosterTotal + 0.5)
     end
     if totalPlayers > 0 then
       pane._totalPlayersFs:SetText(tostring(totalPlayers))

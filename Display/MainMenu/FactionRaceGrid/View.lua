@@ -166,7 +166,7 @@ local function createRaceStatPane(root, raceToken, raceAccent)
   f._guildNames = f:CreateFontString(nil, 'OVERLAY', 'GameFontHighlight')
   f._guildNames:SetJustifyH('LEFT')
   f._guildNames:SetJustifyV('TOP')
-  f._guildNames:SetWordWrap(true)
+  f._guildNames:SetWordWrap(false)
 
   f._avgSubtitle = f:CreateFontString(nil, 'OVERLAY', 'GameFontDisableSmall')
   f._avgSubtitle:SetJustifyH('CENTER')

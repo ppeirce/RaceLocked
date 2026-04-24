@@ -42,6 +42,7 @@ local DEFAULT_RACE_GRID_STORED_GUILD_REPORTS_BY_RACE = {
   NightElf = {
     guildRow('ELFCORE'),
     guildRow('NELFCORE'),
+    guildRow('NIGHTCORE'),
   },
   Dwarf = {
     guildRow('STONECORE'),
