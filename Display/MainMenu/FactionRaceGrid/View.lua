@@ -666,13 +666,10 @@ function RaceLocked_CreateFactionRaceGrid(parent)
         --   )
         -- )
       end
-      local updatedOwnRows = false
       if RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster then
-        updatedOwnRows = RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens) and true or false
-      end
-      if inGuild and not updatedOwnRows then
-        setGuildLoadFailVisible(true)
-        return false
+        -- Keep refresh resilient: if no rows update yet (roster/race data still settling),
+        -- continue rendering existing stored data instead of hard-failing this refresh.
+        RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens)
       end
       runLayout()
       return true
