@@ -33,11 +33,12 @@ local function sendGuildDeathPing()
   if not IsInGuild or not IsInGuild() then
     return
   end
-  if not SendAddonMessage then
+  local send = SendAddonMessage or (C_ChatInfo and C_ChatInfo.SendAddonMessage)
+  if not send then
     return
   end
   print('|cffffffffRace Locked|r: Sending guild death ping.')
-  SendAddonMessage(PREFIX, '1', 'GUILD')
+  send(PREFIX, '1', 'GUILD')
 end
 
 --- Call on local `PLAYER_DEAD` while in a guild (after incrementing stored counts).

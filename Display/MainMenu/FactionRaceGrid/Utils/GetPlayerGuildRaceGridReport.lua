@@ -73,7 +73,7 @@ end
 
 --- Guild roster slice for one API race token (all guild members of that race in your guild).
 --- @param raceToken string e.g. Human, NightElf, Scourge
---- @return table|nil row { guildName, guildSize, averageLevel, classes } or nil if not in a guild / no members of that race
+--- @return table|nil row { guildName, guildSize, averageLevel, classes, guildAchievementsAverage } or nil if not in a guild / no members of that race
 function RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
   if not raceToken or raceToken == '' then
     return nil
@@ -104,9 +104,14 @@ function RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
   end
 
   local playerShort = UnitName('player') and stripRealmFromRosterName(UnitName('player')) or ''
+  local rosterNames = {}
   for i = 1, total do
     -- Returns (warcraft.wiki.gg): … class (11), …, guid (17) — not an 18th slot.
     local name, _, _, level, _, _, _, _, _, _, classFile, _, _, _, _, guid17 = GetGuildRosterInfo(i)
+    local memberShort = stripRealmFromRosterName(name)
+    if memberShort ~= '' then
+      rosterNames[memberShort] = true
+    end
     local levelNum = tonumber(level) or 0
     local guid = resolveGuidFromRosterRow(i, guid17)
 
@@ -162,12 +167,21 @@ function RaceLocked_GetGuildRaceGridReportForRaceToken(raceToken)
     end
   end
 
+  if RaceLocked_AchievementTracking_CleanupForRoster then
+    RaceLocked_AchievementTracking_CleanupForRoster(guildName, rosterNames)
+  end
+  local guildAchievementsAverage = 0
+  if RaceLocked_AchievementTracking_GetGuildAveragePoints then
+    guildAchievementsAverage = RaceLocked_AchievementTracking_GetGuildAveragePoints(guildName) or 0
+  end
+
   return {
     guildName = guildName:match('^%s*(.-)%s*$') or guildName,
     guildSize = n,
     -- Always a number when n > 0 so merge/weighting can show a level (even if roster levels read as 0).
     averageLevel = n > 0 and (sumLevel / n) or nil,
     classes = classes,
+    guildAchievementsAverage = guildAchievementsAverage,
   }
 end
 

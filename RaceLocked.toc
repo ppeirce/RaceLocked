@@ -16,6 +16,8 @@ Libs/LibDBIcon-1.0/LibDBIcon-1.0.lua
 
 Functions/EnforceSameRaceInParty/EnforceSameRaceInParty.lua
 Functions/EnforceRaceLanguage/EnforceRaceLanguage.lua
+Functions/AchievementTracking/Utils/GuildPointsStore.lua
+Functions/AchievementTracking/Index.lua
 Functions/Comms/Utils/WireCodec.lua
 Functions/Comms/Utils/RaceGridStoredUnixTime.lua
 Functions/Comms/ChannelConnection/Index.lua

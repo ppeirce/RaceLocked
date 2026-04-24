@@ -76,6 +76,7 @@ function Comms.BuildPayload(raceToken, row)
   local c = row.classes or Comms.EmptyClasses()
   local ts = tonumber(row.timestamp) or 0
   local deaths = tonumber(row.guildDeaths) or 0
+  local achAvg = tonumber(row.guildAchievementsAverage) or 0
   return table.concat({
     'v4',
     tostring(raceToken or ''),
@@ -102,6 +103,7 @@ function Comms.BuildPayload(raceToken, row)
     tostring(classWireAverage(c.shamans)),
     tostring(ts),
     tostring(deaths),
+    tostring(achAvg),
   }, Comms.WIRE_FIELD_SEP)
 end
 
@@ -152,9 +154,13 @@ function Comms.ParsePayload(msg)
   local wireVersion = p[1]
   local timestamp = 0
   local guildDeaths = 0
+  local guildAchievementsAverage = 0
   if wireVersion == 'v4' and #p >= 25 then
     timestamp = tonumber(p[24]) or 0
     guildDeaths = tonumber(p[25]) or 0
+    if #p >= 26 then
+      guildAchievementsAverage = tonumber(p[26]) or 0
+    end
   elseif wireVersion == 'v3' and #p >= 24 then
     timestamp = tonumber(p[24]) or 0
   elseif wireVersion == 'v2' and #p >= 15 then
@@ -200,5 +206,6 @@ function Comms.ParsePayload(msg)
     },
     timestamp = timestamp,
     guildDeaths = guildDeaths,
+    guildAchievementsAverage = guildAchievementsAverage,
   }
 end
