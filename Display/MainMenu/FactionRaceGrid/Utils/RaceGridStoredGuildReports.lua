@@ -40,28 +40,28 @@ local DEFAULT_RACE_GRID_STORED_GUILD_REPORTS_BY_RACE = {
     guildRow('Honorcore'),
   },
   NightElf = {
-    guildRow('Elfcore'),
-    guildRow('Nelfcore'),
+    guildRow('ELFCORE'),
+    guildRow('NELFCORE'),
   },
   Dwarf = {
-    guildRow('Stonecore'),
-    guildRow('Rockcore'),
+    guildRow('STONECORE'),
+    guildRow('ROCKCORE'),
   },
   Gnome = {
-    guildRow('For Gnomeregan'),
+    guildRow('FOR GNOMEREGAN'),
   },
   Orc = {
-    guildRow('Zugcore'),
+    guildRow('ZUGCORE'),
   },
   Troll = {
     guildRow('Hardingo'),
   },
   Tauren = {
-    guildRow('Herdcore'),
+    guildRow('HERDCORE'),
   },
   Scourge = {
-    guildRow('Deadcore'),
-  },
+    guildRow('DEADCORE'),
+  }
 }
 
 local function copyClasses(classes)
