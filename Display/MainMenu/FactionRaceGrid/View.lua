@@ -638,7 +638,7 @@ function RaceLocked_CreateFactionRaceGrid(parent)
     local function refreshOwnStoredRowsAndRedraw()
       if inGuild then
         local n = readGuildRosterMemberCountForGate()
-        local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 600
+        local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID)
         if rosterRequested and n < 1 then
           setGuildLoadFailVisible(true)
           return false

@@ -87,7 +87,7 @@ local function copyClasses(classes)
 end
 
 local function minGuildMembersForStore()
-  return tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 600
+  return tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID)
 end
 
 local function coerceGuildRow(row, defaultRow)

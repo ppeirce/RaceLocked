@@ -188,6 +188,6 @@ function RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid()
   if not IsInGuild or not IsInGuild() then
     return true
   end
-  local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID) or 600
+  local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID)
   return RaceLocked_GuildChampion_GetGuildRosterMemberCount() >= minN
 end
