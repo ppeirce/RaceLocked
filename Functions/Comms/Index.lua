@@ -28,6 +28,10 @@ function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
   if RaceLocked_GuildChampion_GetNormalizedPlayerGuildName then
     ownGuildNorm = RaceLocked_GuildChampion_GetNormalizedPlayerGuildName() or ''
   end
+  local ownGuildRaw = ''
+  if GetGuildInfo then
+    ownGuildRaw = GetGuildInfo('player') or ''
+  end
   local canStampOwnGuild = ownGuildNorm ~= ''
   local now = RaceLocked_GuildChampion_GetRaceGridStoredUnixTime()
   local stampedOwn = false
@@ -64,10 +68,11 @@ function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
   end
   print(
     string.format(
-      '|cffffffffRace Locked|r: Broadcast own-guild rows seen=%s sent=%s guild=%s',
+      '|cffffffffRace Locked|r: Broadcast own-guild rows seen=%s sent=%s guildNorm=%s guildRaw=%s',
       tostring(ownRowsSeen),
       tostring(ownRowsSent),
-      tostring(ownGuildNorm)
+      tostring(ownGuildNorm),
+      tostring(ownGuildRaw)
     )
   )
 end

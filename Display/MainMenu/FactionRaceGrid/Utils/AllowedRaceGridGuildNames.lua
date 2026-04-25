@@ -73,10 +73,13 @@ end
 --- Current player's guild name (normalized), or '' if not in a guild.
 --- @return string
 function RaceLocked_GuildChampion_GetNormalizedPlayerGuildName()
-  if not IsInGuild or not IsInGuild() or not GetGuildInfo then
+  if not GetGuildInfo then
     return ''
   end
   local guildName = GetGuildInfo('player')
+  if type(guildName) ~= 'string' or guildName == '' then
+    return ''
+  end
   return RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(guildName)
 end
 
