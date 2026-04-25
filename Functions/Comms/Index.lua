@@ -9,31 +9,50 @@ function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
   if not RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid then
     return
   end
+  if RaceLocked_GuildChampion_EnsureStoredGuildReportsDB then
+    RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
+  end
   local channelId = Comms.EnsureDataChannelJoined()
   if channelId <= 0 then
     return
+  end
+  local raceTokens = {}
+  for raceToken, _ in pairs(G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE or {}) do
+    raceTokens[#raceTokens + 1] = raceToken
+  end
+  if #raceTokens > 0 and RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster then
+    -- If we are broadcasting, our own roster data should be fresh and included.
+    RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens)
   end
   local ownGuildNorm = ''
   if RaceLocked_GuildChampion_GetNormalizedPlayerGuildName then
     ownGuildNorm = RaceLocked_GuildChampion_GetNormalizedPlayerGuildName() or ''
   end
   local canStampOwnGuild = ownGuildNorm ~= ''
-    and (not RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid or RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid())
   local now = RaceLocked_GuildChampion_GetRaceGridStoredUnixTime()
   local stampedOwn = false
+  local ownRowsSeen = 0
+  local ownRowsSent = 0
 
   for raceToken, rows in pairs(G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE or {}) do
     if type(rows) == 'table' then
       for _, row in ipairs(rows) do
         if type(row) == 'table' then
           local rowNorm = RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(row.guildName)
-          if canStampOwnGuild and rowNorm ~= '' and rowNorm == ownGuildNorm then
+          local isOwnRow = canStampOwnGuild and rowNorm ~= '' and rowNorm == ownGuildNorm
+          if isOwnRow then
+            ownRowsSeen = ownRowsSeen + 1
+          end
+          if isOwnRow then
             row.timestamp = now
             stampedOwn = true
           end
           local payload = Comms.BuildPayload(raceToken, row)
           if payload and payload ~= '' then
             Comms.SendRaceGridChannelLine(channelId, payload)
+            if isOwnRow then
+              ownRowsSent = ownRowsSent + 1
+            end
           end
         end
       end
@@ -43,6 +62,14 @@ function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
   if stampedOwn and RaceLocked_GuildChampion_PersistStoredGuildReportsByRace then
     RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
   end
+  print(
+    string.format(
+      '|cffffffffRace Locked|r: Broadcast own-guild rows seen=%s sent=%s guild=%s',
+      tostring(ownRowsSeen),
+      tostring(ownRowsSent),
+      tostring(ownGuildNorm)
+    )
+  )
 end
 
 local service = CreateFrame('Frame')
