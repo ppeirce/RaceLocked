@@ -66,15 +66,15 @@ function RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
   if stampedOwn and RaceLocked_GuildChampion_PersistStoredGuildReportsByRace then
     RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
   end
-  print(
-    string.format(
-      '|cffffffffRace Locked|r: Broadcast own-guild rows seen=%s sent=%s guildNorm=%s guildRaw=%s',
-      tostring(ownRowsSeen),
-      tostring(ownRowsSent),
-      tostring(ownGuildNorm),
-      tostring(ownGuildRaw)
-    )
-  )
+  -- print(
+  --   string.format(
+  --     '|cffffffffRace Locked|r: Broadcast own-guild rows seen=%s sent=%s guildNorm=%s guildRaw=%s',
+  --     tostring(ownRowsSeen),
+  --     tostring(ownRowsSent),
+  --     tostring(ownGuildNorm),
+  --     tostring(ownGuildRaw)
+  --   )
+  -- )
 end
 
 local service = CreateFrame('Frame')

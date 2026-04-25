@@ -10,18 +10,18 @@ local function PrintIncomingBroadcast(status, reason, report)
   local guildSize = report and report.guildSize or 'nil'
   local ts = report and report.timestamp or 'nil'
   local deaths = report and report.guildDeaths or 'nil'
-  print(
-    string.format(
-      '|cffffffffRace Locked|r: Incoming broadcast %s guild=%s race=%s size=%s ts=%s deaths=%s reason=%s',
-      tostring(status),
-      tostring(guildName),
-      tostring(raceToken),
-      tostring(guildSize),
-      tostring(ts),
-      tostring(deaths),
-      tostring(reason or '')
-    )
-  )
+  -- print(
+  --   string.format(
+  --     '|cffffffffRace Locked|r: Incoming broadcast %s guild=%s race=%s size=%s ts=%s deaths=%s reason=%s',
+  --     tostring(status),
+  --     tostring(guildName),
+  --     tostring(raceToken),
+  --     tostring(guildSize),
+  --     tostring(ts),
+  --     tostring(deaths),
+  --     tostring(reason or '')
+  --   )
+  -- )
 end
 
 function Comms.ApplyIncomingReport(report)
@@ -167,13 +167,13 @@ function Comms.ApplyIncomingGuildDeath(event)
       local rowNorm = RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(row.guildName)
       if rowNorm ~= '' and rowNorm == incomingNorm then
         row.guildDeaths = (tonumber(row.guildDeaths) or 0) + 1
-        print(
-          string.format(
-            '|cffffffffRace Locked|r: Received bus death event for %s (%s), incrementing guild deaths.',
-            tostring(guildName),
-            tostring(raceToken)
-          )
-        )
+        -- print(
+        --   string.format(
+        --     '|cffffffffRace Locked|r: Received bus death event for %s (%s), incrementing guild deaths.',
+        --     tostring(guildName),
+        --     tostring(raceToken)
+        --   )
+        -- )
         if RaceLocked_GuildChampion_PersistStoredGuildReportsByRace then
           RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
         end
