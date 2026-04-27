@@ -125,6 +125,12 @@ function Comms.SendRaceGridChannelLine(channelId, payload)
   -- Hex on the wire: no '|' (chat escapes) and no raw control bytes that might get altered.
   local wire = Comms.PREFIX .. ':' .. Comms.BytesToHex(payload)
   if #wire > 255 then
+    -- print(
+    --   string.format(
+    --     '|cffffffffRace Locked|r: Broadcast dropped (wire too long len=%s, max=255).',
+    --     tostring(#wire)
+    --   )
+    -- )
     return
   end
   SendChatMessage(wire, 'CHANNEL', nil, channelId)

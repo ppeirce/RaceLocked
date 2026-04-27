@@ -62,6 +62,11 @@ local function classWireAverage(classEntry)
   return 0
 end
 
+local function wireInt(n)
+  local v = tonumber(n) or 0
+  return math.floor(v + 0.5)
+end
+
 function Comms.SanitizeGuildName(name)
   local s = tostring(name or '')
   s = s:gsub('|', '/')
@@ -74,33 +79,33 @@ function Comms.BuildPayload(raceToken, row)
     return nil
   end
   local c = row.classes or Comms.EmptyClasses()
-  local ts = tonumber(row.timestamp) or 0
-  local deaths = tonumber(row.guildDeaths) or 0
-  local achAvg = tonumber(row.guildAchievementsAverage) or 0
+  local ts = wireInt(row.timestamp)
+  local deaths = wireInt(row.guildDeaths)
+  local achAvg = wireInt(row.guildAchievementsAverage)
   return table.concat({
     'v4',
     tostring(raceToken or ''),
     Comms.SanitizeGuildName(row.guildName or ''),
-    tostring(tonumber(row.guildSize) or 0),
-    tostring(tonumber(row.averageLevel) or 0),
-    tostring(classWireCount(c.druids)),
-    tostring(classWireAverage(c.druids)),
-    tostring(classWireCount(c.rogues)),
-    tostring(classWireAverage(c.rogues)),
-    tostring(classWireCount(c.hunters)),
-    tostring(classWireAverage(c.hunters)),
-    tostring(classWireCount(c.warriors)),
-    tostring(classWireAverage(c.warriors)),
-    tostring(classWireCount(c.mages)),
-    tostring(classWireAverage(c.mages)),
-    tostring(classWireCount(c.priests)),
-    tostring(classWireAverage(c.priests)),
-    tostring(classWireCount(c.warlocks)),
-    tostring(classWireAverage(c.warlocks)),
-    tostring(classWireCount(c.paladins)),
-    tostring(classWireAverage(c.paladins)),
-    tostring(classWireCount(c.shamans)),
-    tostring(classWireAverage(c.shamans)),
+    tostring(wireInt(row.guildSize)),
+    tostring(wireInt(row.averageLevel)),
+    tostring(wireInt(classWireCount(c.druids))),
+    tostring(wireInt(classWireAverage(c.druids))),
+    tostring(wireInt(classWireCount(c.rogues))),
+    tostring(wireInt(classWireAverage(c.rogues))),
+    tostring(wireInt(classWireCount(c.hunters))),
+    tostring(wireInt(classWireAverage(c.hunters))),
+    tostring(wireInt(classWireCount(c.warriors))),
+    tostring(wireInt(classWireAverage(c.warriors))),
+    tostring(wireInt(classWireCount(c.mages))),
+    tostring(wireInt(classWireAverage(c.mages))),
+    tostring(wireInt(classWireCount(c.priests))),
+    tostring(wireInt(classWireAverage(c.priests))),
+    tostring(wireInt(classWireCount(c.warlocks))),
+    tostring(wireInt(classWireAverage(c.warlocks))),
+    tostring(wireInt(classWireCount(c.paladins))),
+    tostring(wireInt(classWireAverage(c.paladins))),
+    tostring(wireInt(classWireCount(c.shamans))),
+    tostring(wireInt(classWireAverage(c.shamans))),
     tostring(ts),
     tostring(deaths),
     tostring(achAvg),

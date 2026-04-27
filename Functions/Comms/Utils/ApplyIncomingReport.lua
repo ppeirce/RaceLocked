@@ -4,38 +4,62 @@ local G = RaceLocked_GuildChampion
 G.Comms = G.Comms or {}
 local Comms = G.Comms
 
+local function PrintIncomingBroadcast(status, reason, report)
+  local guildName = report and report.guildName or 'nil'
+  local raceToken = report and report.raceToken or 'nil'
+  local guildSize = report and report.guildSize or 'nil'
+  local ts = report and report.timestamp or 'nil'
+  local deaths = report and report.guildDeaths or 'nil'
+  -- print(
+  --   string.format(
+  --     '|cffffffffRace Locked|r: Incoming broadcast %s guild=%s race=%s size=%s ts=%s deaths=%s reason=%s',
+  --     tostring(status),
+  --     tostring(guildName),
+  --     tostring(raceToken),
+  --     tostring(guildSize),
+  --     tostring(ts),
+  --     tostring(deaths),
+  --     tostring(reason or '')
+  --   )
+  -- )
+end
+
 function Comms.ApplyIncomingReport(report)
+  PrintIncomingBroadcast('RECEIVED', 'payload received', report)
   if not report then
+    PrintIncomingBroadcast('REJECTED', 'missing payload', report)
     return false
   end
-  local minN = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID
-  if RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid then
-    minN = RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(report.guildName)
-  end
-  minN = tonumber(minN) or 500
+  local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID)
   if (tonumber(report.guildSize) or 0) < minN then
+    PrintIncomingBroadcast('REJECTED', 'guild size below minimum', report)
     return false
   end
   if RaceLocked_GuildChampion_EnsureStoredGuildReportsDB then
     RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
   end
   if not RaceLocked_GuildChampion_IsGuildNameAllowedForRaceGrid then
+    PrintIncomingBroadcast('REJECTED', 'allow-list checker unavailable', report)
     return false
   end
   if not RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid then
+    PrintIncomingBroadcast('REJECTED', 'guild-name normalizer unavailable', report)
     return false
   end
   if not RaceLocked_GuildChampion_IsGuildNameAllowedForRaceGrid(report.guildName) then
+    PrintIncomingBroadcast('REJECTED', 'guild not allowed for race grid', report)
     return false
   end
 
   local rows = G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE and G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE[report.raceToken]
   if type(rows) ~= 'table' then
+    PrintIncomingBroadcast('REJECTED', 'race bucket missing', report)
     return false
   end
 
   local incomingNorm = RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(report.guildName)
   if incomingNorm == '' then
+    PrintIncomingBroadcast('REJECTED', 'normalized incoming guild empty', report)
     return false
   end
   if RaceLocked_GuildChampion_GetNormalizedPlayerGuildName
@@ -45,6 +69,7 @@ function Comms.ApplyIncomingReport(report)
     if ownGuildNorm ~= '' and incomingNorm == ownGuildNorm
       and not RaceLocked_GuildChampion_MeetsMinGuildMembersForRaceGrid()
     then
+      PrintIncomingBroadcast('REJECTED', 'own guild below minimum members', report)
       return false
     end
   end
@@ -64,6 +89,7 @@ function Comms.ApplyIncomingReport(report)
         local storedDeaths = tonumber(row.guildDeaths) or 0
         local acceptByDeaths = incomingDeaths > storedDeaths
         if not acceptByTimestamp and not acceptByDeaths then
+          PrintIncomingBroadcast('REJECTED', 'incoming report not newer and no death increase', report)
           return false
         end
         if acceptByTimestamp then
@@ -79,6 +105,19 @@ function Comms.ApplyIncomingReport(report)
         if acceptByDeaths then
           row.guildDeaths = incomingDeaths
         end
+        PrintIncomingBroadcast(
+          'ACCEPTED',
+          string.format(
+            'applied update byTimestamp=%s byDeaths=%s storedTs=%s incomingTs=%s storedDeaths=%s incomingDeaths=%s',
+            tostring(acceptByTimestamp),
+            tostring(acceptByDeaths),
+            tostring(storedTs),
+            tostring(incomingTs),
+            tostring(storedDeaths),
+            tostring(incomingDeaths)
+          ),
+          report
+        )
         if RaceLocked_GuildChampion_PersistStoredGuildReportsByRace then
           RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
         end
@@ -89,6 +128,7 @@ function Comms.ApplyIncomingReport(report)
       end
     end
   end
+  PrintIncomingBroadcast('REJECTED', 'no matching guild row found', report)
   return false
 end
 
@@ -131,13 +171,13 @@ function Comms.ApplyIncomingGuildDeath(event)
       local rowNorm = RaceLocked_GuildChampion_NormalizeGuildNameForRaceGrid(row.guildName)
       if rowNorm ~= '' and rowNorm == incomingNorm then
         row.guildDeaths = (tonumber(row.guildDeaths) or 0) + 1
-        print(
-          string.format(
-            '|cffffffffRace Locked|r: Received bus death event for %s (%s), incrementing guild deaths.',
-            tostring(guildName),
-            tostring(raceToken)
-          )
-        )
+        -- print(
+        --   string.format(
+        --     '|cffffffffRace Locked|r: Received bus death event for %s (%s), incrementing guild deaths.',
+        --     tostring(guildName),
+        --     tostring(raceToken)
+        --   )
+        -- )
         if RaceLocked_GuildChampion_PersistStoredGuildReportsByRace then
           RaceLocked_GuildChampion_PersistStoredGuildReportsByRace()
         end

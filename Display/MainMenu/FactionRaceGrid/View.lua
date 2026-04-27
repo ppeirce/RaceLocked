@@ -185,7 +185,7 @@ local function createRaceStatPane(root, raceToken, raceAccent)
   f._guildNames = f:CreateFontString(nil, 'OVERLAY', 'GameFontHighlight')
   f._guildNames:SetJustifyH('LEFT')
   f._guildNames:SetJustifyV('TOP')
-  f._guildNames:SetWordWrap(true)
+  f._guildNames:SetWordWrap(false)
 
   f._avgSubtitle = f:CreateFontString(nil, 'OVERLAY', 'GameFontDisableSmall')
   f._avgSubtitle:SetJustifyH('CENTER')
@@ -664,11 +664,7 @@ function RaceLocked_CreateFactionRaceGrid(parent)
     local function refreshOwnStoredRowsAndRedraw()
       if inGuild then
         local n = readGuildRosterMemberCountForGate()
-        local minN = G.MIN_GUILD_MEMBERS_FOR_RACE_GRID
-        if RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid and GetGuildInfo then
-          minN = RaceLocked_GuildChampion_GetMinGuildMembersForRaceGrid(GetGuildInfo('player'))
-        end
-        minN = tonumber(minN) or 500
+        local minN = tonumber(G.MIN_GUILD_MEMBERS_FOR_RACE_GRID)
         if rosterRequested and n < 1 then
           setGuildLoadFailVisible(true)
           return false
@@ -692,13 +688,10 @@ function RaceLocked_CreateFactionRaceGrid(parent)
         --   )
         -- )
       end
-      local updatedOwnRows = false
       if RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster then
-        updatedOwnRows = RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens) and true or false
-      end
-      if inGuild and not updatedOwnRows then
-        setGuildLoadFailVisible(true)
-        return false
+        -- Keep refresh resilient: if no rows update yet (roster/race data still settling),
+        -- continue rendering existing stored data instead of hard-failing this refresh.
+        RaceLocked_GuildChampion_UpdateOwnStoredGuildReportsFromRoster(raceTokens)
       end
       runLayout()
       return true

@@ -88,6 +88,8 @@ function RaceLocked_GuildChampion_AggregateGuildsForRace(entries)
     guildNamesText = table.concat(names, ', '),
     averageLevel = totalMembers > 0 and (weightedSum / totalMembers) or nil,
     classes = classes,
+    --- Sum of each row’s `guildSize` (full roster) for this race’s slots. Used for the “Total players” label; class rows may be incomplete for some guilds.
+    totalRosterMembers = totalMembers,
   }
 end
 
@@ -104,6 +106,7 @@ function RaceLocked_GuildChampion_GetAggregatedMockForRace(raceToken)
       guildNamesText = namesText,
       averageLevel = nil,
       classes = zeroClassesAggregate(),
+      totalRosterMembers = 0,
     }
   end
   agg.guildNamesText = namesText
