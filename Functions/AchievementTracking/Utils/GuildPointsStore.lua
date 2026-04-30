@@ -25,6 +25,7 @@ local function ensureDB(guildName)
 end
 
 --- Store (or update) a player's totalPoints for a guild.
+--- Uses max(stored, incoming) since achievement points only go up.
 --- @param guildName string
 --- @param playerName string
 --- @param totalPoints number
@@ -36,7 +37,11 @@ function RaceLocked_AchievementTracking_SetPlayerPoints(guildName, playerName, t
   if type(playerName) ~= 'string' or playerName == '' then
     return
   end
-  store[playerName] = tonumber(totalPoints) or 0
+  local incoming = tonumber(totalPoints) or 0
+  local existing = tonumber(store[playerName]) or 0
+  if incoming >= existing then
+    store[playerName] = incoming
+  end
 end
 
 --- Get a single player's stored totalPoints (or 0 if unknown).
@@ -86,6 +91,13 @@ function RaceLocked_AchievementTracking_GetGuildReportingCount(guildName)
     count = count + 1
   end
   return count
+end
+
+--- Return the full store table for a guild (for relay broadcasting).
+--- @param guildName string
+--- @return table<string, number>|nil
+function RaceLocked_AchievementTracking_GetAllPlayerPoints(guildName)
+  return ensureDB(guildName)
 end
 
 --- Remove stored entries for players no longer in the guild roster.

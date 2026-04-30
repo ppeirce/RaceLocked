@@ -53,15 +53,91 @@ local function isSenderLocalPlayer(sender)
   return false
 end
 
-local function broadcastPointsToGuild(totalPoints)
+local function getAddonSend()
   if not IsInGuild or not IsInGuild() then
-    return
+    return nil
   end
-  local send = SendAddonMessage or (C_ChatInfo and C_ChatInfo.SendAddonMessage)
+  return SendAddonMessage or (C_ChatInfo and C_ChatInfo.SendAddonMessage)
+end
+
+--- All guild addon messages use the "R:" relay format: "R:Name1=Pts1,Name2=Pts2,..."
+--- packed to fit within the 255-byte addon message limit.
+local RELAY_PREFIX = 'R:'
+local MAX_ADDON_MSG = 255
+
+local function broadcastOwnPointsToGuild(playerName, totalPoints)
+  local send = getAddonSend()
   if not send then
     return
   end
-  send(ADDON_PREFIX, tostring(totalPoints or 0), 'GUILD')
+  local msg = RELAY_PREFIX .. playerName .. '=' .. tostring(tonumber(totalPoints) or 0)
+  send(ADDON_PREFIX, msg, 'GUILD')
+end
+
+local function buildRelayMessages(guildName)
+  if not RaceLocked_AchievementTracking_GetAllPlayerPoints then
+    return {}
+  end
+  local store = RaceLocked_AchievementTracking_GetAllPlayerPoints(guildName)
+  if not store then
+    return {}
+  end
+  local messages = {}
+  local buf = RELAY_PREFIX
+  for name, pts in pairs(store) do
+    local entry = name .. '=' .. tostring(tonumber(pts) or 0)
+    local piece = (buf == RELAY_PREFIX) and entry or (',' .. entry)
+    if #buf + #piece > MAX_ADDON_MSG then
+      if buf ~= RELAY_PREFIX then
+        messages[#messages + 1] = buf
+      end
+      buf = RELAY_PREFIX .. entry
+    else
+      buf = buf .. piece
+    end
+  end
+  if buf ~= RELAY_PREFIX then
+    messages[#messages + 1] = buf
+  end
+  return messages
+end
+
+--- Send relay messages one per frame to avoid throttling.
+local relayQueue = {}
+local relayTicker = nil
+
+local function drainRelayQueue()
+  if #relayQueue == 0 then
+    if relayTicker then
+      relayTicker:Cancel()
+      relayTicker = nil
+    end
+    return
+  end
+  local send = getAddonSend()
+  if not send then
+    relayQueue = {}
+    if relayTicker then
+      relayTicker:Cancel()
+      relayTicker = nil
+    end
+    return
+  end
+  local msg = table.remove(relayQueue, 1)
+  send(ADDON_PREFIX, msg, 'GUILD')
+end
+
+local function broadcastRelayToGuild(guildName)
+  local msgs = buildRelayMessages(guildName)
+  if #msgs == 0 then
+    return
+  end
+  for i = 1, #msgs do
+    relayQueue[#relayQueue + 1] = msgs[i]
+  end
+  if not relayTicker and C_Timer and C_Timer.NewTicker then
+    relayTicker = C_Timer.NewTicker(0.1, drainRelayQueue)
+  end
 end
 
 local function storeOwnPoints(totalPoints)
@@ -110,9 +186,32 @@ local function installHardcoreAchievementsHook()
     local totalPoints = tonumber(achievementData.totalPoints) or 0
     lastKnownTotalPoints = totalPoints
     storeOwnPoints(totalPoints)
-    broadcastPointsToGuild(totalPoints)
+    local pn = getPlayerName()
+    if pn then
+      broadcastOwnPointsToGuild(pn, totalPoints)
+    end
   end)
   return true
+end
+
+local function applyRelayMessage(guildName, message)
+  local payload = string.sub(message, #RELAY_PREFIX + 1)
+  if payload == '' then
+    return
+  end
+  if not RaceLocked_AchievementTracking_SetPlayerPoints then
+    return
+  end
+  for entry in string.gmatch(payload, '[^,]+') do
+    local eq = string.find(entry, '=', 1, true)
+    if eq and eq > 1 then
+      local name = string.sub(entry, 1, eq - 1)
+      local pts = tonumber(string.sub(entry, eq + 1))
+      if name ~= '' and pts then
+        RaceLocked_AchievementTracking_SetPlayerPoints(guildName, name, pts)
+      end
+    end
+  end
 end
 
 local function onAddonMessage(prefix, message, channel, sender)
@@ -125,44 +224,41 @@ local function onAddonMessage(prefix, message, channel, sender)
   if isSenderLocalPlayer(sender) then
     return
   end
-  local totalPoints = tonumber(message)
-  if not totalPoints then
-    return
-  end
   local guildName = getPlayerGuildName()
   if not guildName then
     return
   end
-  local senderName = sender
-  local dash = string.find(senderName, '-', 1, true)
-  if dash and dash > 1 then
-    senderName = string.sub(senderName, 1, dash - 1)
-  end
-  if RaceLocked_AchievementTracking_SetPlayerPoints then
-    RaceLocked_AchievementTracking_SetPlayerPoints(guildName, senderName, totalPoints)
+  if string.sub(message, 1, #RELAY_PREFIX) == RELAY_PREFIX then
+    applyRelayMessage(guildName, message)
   end
 end
 
---- Query HardcoreAchievements for current points, store locally, and broadcast to guild.
---- Called from the sync button before the roster scan so the average is up to date.
+--- Query HardcoreAchievements for current points and store locally.
+--- Called from the sync button BEFORE the roster scan so the player's own
+--- points are included in the average. Does NOT broadcast -- call
+--- RaceLocked_AchievementTracking_BroadcastRelay after the roster scan
+--- so stale entries are pruned before going out on the wire.
 function RaceLocked_AchievementTracking_SyncOwnPoints()
+  local guildName = getPlayerGuildName()
+  local playerName = getPlayerName()
   local live = queryHardcoreAchievementPoints()
   if live and live > 0 then
     lastKnownTotalPoints = live
     storeOwnPoints(live)
-    broadcastPointsToGuild(live)
-    return
+  elseif guildName and playerName then
+    if lastKnownTotalPoints and lastKnownTotalPoints > 0 then
+      storeOwnPoints(lastKnownTotalPoints)
+    end
   end
+end
+
+--- Broadcast the full known points store to the guild.
+--- Called AFTER the roster scan so CleanupForRoster has already pruned
+--- players who left the guild.
+function RaceLocked_AchievementTracking_BroadcastRelay()
   local guildName = getPlayerGuildName()
-  local playerName = getPlayerName()
-  if guildName and playerName and RaceLocked_AchievementTracking_GetPlayerPoints then
-    local stored = RaceLocked_AchievementTracking_GetPlayerPoints(guildName, playerName)
-    if lastKnownTotalPoints then
-      stored = lastKnownTotalPoints
-    end
-    if stored and stored > 0 then
-      broadcastPointsToGuild(stored)
-    end
+  if guildName then
+    broadcastRelayToGuild(guildName)
   end
 end
 

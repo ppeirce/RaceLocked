@@ -723,6 +723,9 @@ function RaceLocked_CreateFactionRaceGrid(parent)
       if RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports then
         RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
       end
+      if RaceLocked_AchievementTracking_BroadcastRelay then
+        RaceLocked_AchievementTracking_BroadcastRelay()
+      end
       refreshBtn._isAppliedAndBroadcasted = true
     end
     finishRefreshButton()
