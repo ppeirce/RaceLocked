@@ -139,13 +139,32 @@ local function createRaceStatPane(root, raceToken, raceAccent)
   f._achievementIcon:SetSize(16, 16)
 
   f._achievementInfoHit = CreateFrame('Frame', nil, f)
+  f._achievementInfoHit:SetFrameLevel((f.GetFrameLevel and f:GetFrameLevel() or 0) + 6)
   f._achievementInfoHit:EnableMouse(true)
   f._achievementInfoHit:SetScript('OnEnter', function(self)
     if not GameTooltip then
       return
     end
     GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
+    GameTooltip:ClearLines()
     GameTooltip:AddLine('Race average achievement points', 1, 0.92, 0.62)
+    local token = self._rlRaceToken
+    if token and RaceLocked_GuildChampion and RaceLocked_GuildChampion.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE
+      and RaceLocked_AchievementTracking_GetGuildReportingCount
+    then
+      local rows = RaceLocked_GuildChampion.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE[token]
+      if type(rows) == 'table' then
+        local totalReporting = 0
+        for _, row in ipairs(rows) do
+          if type(row) == 'table' and (tonumber(row.guildSize) or 0) > 0 then
+            totalReporting = totalReporting + RaceLocked_AchievementTracking_GetGuildReportingCount(row.guildName)
+          end
+        end
+        if totalReporting > 0 then
+          GameTooltip:AddLine('Based on ' .. totalReporting .. ' players with the addon', 1, 1, 1)
+        end
+      end
+    end
     GameTooltip:Show()
   end)
   f._achievementInfoHit:SetScript('OnLeave', function()
@@ -345,10 +364,10 @@ local function layoutRaceGridPane(pane, labelFs, detailFs, tx, raceToken)
     pane._achievementPointsFs:ClearAllPoints()
     pane._achievementPointsFs:SetPoint('RIGHT', pane._achievementIcon, 'LEFT', -4, -1)
   end
-  if pane._achievementInfoHit and pane._achievementIcon then
+  if pane._achievementInfoHit and pane._achievementIcon and pane._achievementPointsFs then
     pane._achievementInfoHit:ClearAllPoints()
     pane._achievementInfoHit:SetPoint('TOPRIGHT', pane._achievementIcon, 'TOPRIGHT', 0, 0)
-    pane._achievementInfoHit:SetPoint('BOTTOMLEFT', pane._achievementIcon, 'BOTTOMLEFT', -24, 0)
+    pane._achievementInfoHit:SetPoint('BOTTOMLEFT', pane._achievementPointsFs, 'BOTTOMLEFT', 0, 0)
   end
 end
 
@@ -468,6 +487,9 @@ local function layoutGrid(ctx)
         ach = RaceLocked_GuildChampion_GetWeightedGuildAchievementsAverageForRace(ctx.raceTokens[i]) or 0
       end
       panes[i]._achievementPointsFs:SetText(formatRaceGridStatDisplay(ach))
+    end
+    if panes[i]._achievementInfoHit then
+      panes[i]._achievementInfoHit._rlRaceToken = ctx.raceTokens[i]
     end
   end
 
@@ -631,6 +653,10 @@ function RaceLocked_CreateFactionRaceGrid(parent)
     refreshBtn:Disable()
     refreshBtn:SetAlpha(0.75)
 
+    if RaceLocked_AchievementTracking_SyncOwnPoints then
+      RaceLocked_AchievementTracking_SyncOwnPoints()
+    end
+
     local rosterRequested = false
     RaceLocked_RefreshGuildRoster()
     rosterRequested = true
@@ -696,6 +722,9 @@ function RaceLocked_CreateFactionRaceGrid(parent)
       setGuildLoadFailVisible(false)
       if RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports then
         RaceLocked_GuildChampion_BroadcastOwnGuildRaceGridReports()
+      end
+      if RaceLocked_AchievementTracking_BroadcastRelay then
+        RaceLocked_AchievementTracking_BroadcastRelay()
       end
       refreshBtn._isAppliedAndBroadcasted = true
     end

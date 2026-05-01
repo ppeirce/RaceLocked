@@ -181,6 +181,7 @@ local function applyRowReport(targetRow, report)
   targetRow.averageLevel = tonumber(report and report.averageLevel) or 0
   targetRow.classes = copyClasses(report and report.classes)
   -- Roster refresh does not imply a broadcast stamp; timestamp is owned by comms apply / own broadcast.
+  targetRow.guildAchievementsAverage = tonumber(report and report.guildAchievementsAverage) or targetRow.guildAchievementsAverage or 0
   return true
 end
 
@@ -281,8 +282,9 @@ function RaceLocked_GuildChampion_GetTotalGuildDeathsForRace(raceToken)
 end
 
 --- Member-weighted average of `guildAchievementsAverage` for stored guild rows of one race (for UI).
+--- Guilds with 0 achievement average are excluded (0 means no data, not zero points).
 --- @param raceToken string
---- @return number 0 when no roster-sized rows
+--- @return number 0 when no guilds have reported achievement data
 function RaceLocked_GuildChampion_GetWeightedGuildAchievementsAverageForRace(raceToken)
   RaceLocked_GuildChampion_EnsureStoredGuildReportsDB()
   local rows = G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE and G.RACE_GRID_STORED_GUILD_REPORTS_BY_RACE[raceToken]
@@ -294,8 +296,8 @@ function RaceLocked_GuildChampion_GetWeightedGuildAchievementsAverageForRace(rac
   for _, row in ipairs(rows) do
     if type(row) == 'table' then
       local sz = tonumber(row.guildSize) or 0
-      if sz > 0 then
-        local ach = tonumber(row.guildAchievementsAverage) or 0
+      local ach = tonumber(row.guildAchievementsAverage) or 0
+      if sz > 0 and ach > 0 then
         totalMembers = totalMembers + sz
         weighted = weighted + ach * sz
       end
