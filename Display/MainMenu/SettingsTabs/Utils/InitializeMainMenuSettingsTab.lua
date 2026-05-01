@@ -124,4 +124,19 @@ function RaceLocked_InitializeMainMenuSettingsTab(content)
       RaceLocked_ApplyNativeLanguageOption()
     end
   end)
+
+  local forceRaceOnlyGroupingRow = CreateOptionRowButton(body)
+  forceRaceOnlyGroupingRow:SetPoint('TOPLEFT', langRow, 'BOTTOMLEFT', 0, -10)
+  forceRaceOnlyGroupingRow:SetPoint('TOPRIGHT', langRow, 'BOTTOMRIGHT', 0, -10)
+  forceRaceOnlyGroupingRow.Text:SetText('Force race only grouping')
+  forceRaceOnlyGroupingRow:SetDescription('When enabled, players will only be able to group with other players of the same race.')
+  forceRaceOnlyGroupingRow:SetChecked(RaceLocked_Options_GetForceRaceOnlyGrouping and RaceLocked_Options_GetForceRaceOnlyGrouping() or false)
+
+  forceRaceOnlyGroupingRow.Check:SetScript('OnClick', function(btn)
+    local newVal = btn:GetChecked() and true or false
+    forceRaceOnlyGroupingRow:SetChecked(newVal)
+    if RaceLocked_Options_SetForceRaceOnlyGrouping then
+      RaceLocked_Options_SetForceRaceOnlyGrouping(newVal)
+    end
+  end)
 end

@@ -2,6 +2,7 @@
 
 RaceLocked_OptionsDefaults = {
   nativeLanguageOnly = true,
+  forceRaceOnlyGrouping = true,
 }
 
 local function ensureOptionsTable()
@@ -28,6 +29,16 @@ end
 function RaceLocked_Options_SetNativeLanguageOnly(enabled)
   ensureOptionsTable()
   RaceLockedDB.options.nativeLanguageOnly = enabled and true or false
+end
+
+function RaceLocked_Options_GetForceRaceOnlyGrouping()
+  ensureOptionsTable()
+  return RaceLockedDB.options.forceRaceOnlyGrouping ~= false
+end
+
+function RaceLocked_Options_SetForceRaceOnlyGrouping(enabled)
+  ensureOptionsTable()
+  RaceLockedDB.options.forceRaceOnlyGrouping = enabled and true or false
 end
 
 RaceLocked_Options_EnsureLoaded()

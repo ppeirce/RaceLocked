@@ -1,9 +1,16 @@
 
 local function EnforceSameRaceInParty()
+
     local playerRace = UnitRace("player")
     if not playerRace then
         return
     end
+    
+    
+    if RaceLocked_Options_GetForceRaceOnlyGrouping and RaceLocked_Options_GetForceRaceOnlyGrouping() == false then
+        return
+    end
+
     -- In Classic, party units are addressed as party1..partyN.
     local partyCount = GetNumSubgroupMembers()
     for i = 1, partyCount do
